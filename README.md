@@ -1,3 +1,9 @@
+> **Disclaimer.** This project is vibe coded: it was written with an AI assistant and has not had a
+> formal code review or test pass. All geometry data it contains or imports (bike frames, cockpit
+> presets, saddle figures) is **not validated** — it may be wrong, outdated or mis-transcribed.
+> Check every figure against the manufacturer and your fitter before ordering parts or changing
+> your bike setup, and use the results at your own risk.
+
 # BikeGeo — cockpit calculator
 
 An ASP.NET Core (.NET 10) Blazor Server app that turns a bike-fit result into a build sheet:
@@ -251,3 +257,7 @@ BikeFit.Web/
     cockpits.json          your cockpit corrections and custom cockpits
     settings.json          last working state
 ```
+
+## License
+
+[MIT](LICENSE) — free to use, copy, modify, merge, publish and distribute, with no warranty.
