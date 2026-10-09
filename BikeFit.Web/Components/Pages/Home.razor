@@ -1,0 +1,818 @@
+@page "/"
+@using System.Globalization
+@using BikeFit.Web.Models
+@using BikeFit.Web.Services
+@using BikeFit.Web.Components.Diagrams
+@using BikeFit.Web.Components.Shared
+@rendermode InteractiveServer
+@inject BikeLibrary Library
+@inject FitLibrary Fits
+@inject UserSettingsStore Settings
+@inject GeometryImporter Importer
+@implements IDisposable
+
+<PageTitle>Bike fit calculator &#183; BRP / HB</PageTitle>
+
+<header class="page-head">
+    <h1>Cockpit calculator</h1>
+    <p>
+        Give it the BRP and HB coordinates from the fit session and it works out which frame size,
+        which stem and how many spacers put the bar exactly where it belongs.
+    </p>
+</header>
+
+<div class="layout">
+    <aside class="panel">
+        <section>
+            <h2>Fit target</h2>
+            <label>Saved fit
+                <select @onchange="ApplyFit" value="@fitId">
+                    <option value="">Not saved</option>
+                    @foreach (var f in Fits.All)
+                    {
+                        <option value="@f.Id">@f.Name</option>
+                    }
+                </select>
+            </label>
+            <div class="cockpit-save">
+                <input @bind="newFitName" placeholder="Name this fit" />
+                <button class="secondary" @onclick="SaveFit">@(fitId.Length > 0 ? "Update" : "Save")</button>
+                @if (fitId.Length > 0)
+                {
+                    <button class="link danger" @onclick="() => DeleteFit(fitId)">delete</button>
+                }
+            </div>
+            <DataTransfer Label="fits" DownloadUrl="export/fits" FileName="bikefit-fits.json" Import="Fits.Import" />
+
+            <p class="hint">
+                Both points are measured from the bottom bracket centre, as idmatch reports them.
+                BRP X is saddle setback, entered positive for a saddle behind the BB; HB X is positive
+                towards the front wheel; Z is up on both.
+                <b>BRP</b> is the Biomechanical Reference Point: the spot on the saddle where its width
+                reaches 70&nbsp;mm. Because it is defined by width rather than by the nose or the midpoint,
+                it lands on the same part of the rider on any saddle, so the coordinates carry across
+                saddles unchanged. <b>HB</b> is on the bar tops at the stem clamp &mdash; not the hoods.
+            </p>
+            <div class="grid2">
+                <label title="Saddle setback: how far the BRP sits behind the bottom bracket. Enter it positive.">
+                    BRP X, behind BB (mm)<input type="number" step="1" @bind="target.BrpSetback" @bind:event="oninput" />
+                </label>
+                <label>BRP Z (mm)<input type="number" step="1" @bind="target.BrpZ" @bind:event="oninput" /></label>
+                <label>HB X (mm)<input type="number" step="1" @bind="target.HbX" @bind:event="oninput" /></label>
+                <label>HB Z (mm)<input type="number" step="1" @bind="target.HbZ" @bind:event="oninput" /></label>
+                <label>HB measured at
+                    <select @bind="target.HbReference">
+                        <option value="@HbReference.BarCentre">Bar tube centre</option>
+                        <option value="@HbReference.BarTop">Top of the bar tube</option>
+                        <option value="@HbReference.BarFront">Front of the bar tops</option>
+                    </select>
+                </label>
+                <label>Tolerance (mm)<input type="number" step="1" @bind="target.ToleranceMm" @bind:event="oninput" /></label>
+            </div>
+            <ul class="derived">
+                <li><span>Saddle height (BB to BRP)</span><b>@F1(metrics.SaddleHeight) mm</b></li>
+                <li><span>Saddle setback</span><b>@F1(metrics.SaddleSetback) mm</b></li>
+                <li title="Straight line from BRP to HB - the number the idmatch fit converter shows">
+                    <span>Saddle to bar, direct</span><b>@F1(metrics.SaddleToBarDirect) mm</b></li>
+                <li><span>Saddle to bar, horizontal</span><b>@F1(metrics.SaddleToBarHorizontal) mm</b></li>
+                <li><span>Saddle to bar drop</span><b>@F1(metrics.SaddleToBarDrop) mm</b></li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Saddle &amp; seatpost</h2>
+            <p class="hint">
+                None of this moves the BRP &mdash; the fit sheet already fixes that. It decides whether the
+                frame, post and saddle can actually put the BRP there. Rails themselves are standardised
+                (7&nbsp;mm round or 7&#215;9&nbsp;mm oval, 44&nbsp;mm apart) and road saddles sit 35&ndash;45&nbsp;mm
+                above their rail centreline, so the only input that really bites is the travel* &mdash;
+                check the limit marks on your own rails.
+            </p>
+            <div class="grid2">
+                <label title="Drop from the BRP to the rail CENTRELINE. Road saddles cluster at 35-45 mm; an S-Works Power is about 36.5. If you measure the 'saddle stack' from the bottom of the rail, subtract 3.5 mm for the rail itself.">
+                    Rail drop below BRP (mm)<input type="number" step="1" @bind="saddle.RailDrop" @bind:event="oninput" />
+                </label>
+                <label title="Offset from the post axis to the rail cradle, perpendicular to the post. 0 for an inline post.">
+                    Post setback (mm)<input type="number" step="1" @bind="saddle.PostOffset" @bind:event="oninput" />
+                </label>
+                <label title="How far the saddle can slide each way before hitting the limit marks on the rails. This is the one worth checking - short-nose saddles have shorter rails than the ±25 mm default assumes.">
+                    Rail travel &#177; (mm)*<input type="number" step="1" @bind="saddle.RailRange" @bind:event="oninput" />
+                </label>
+                <label>Saddle length (mm)<input type="number" step="1" @bind="saddle.Length" @bind:event="oninput" /></label>
+                <label title="Drawing only - it positions the saddle outline and changes no calculation">
+                    Nose to BRP (mm)<input type="number" step="1" @bind="saddle.BrpFromNose" @bind:event="oninput" />
+                </label>
+            </div>
+        </section>
+
+        <section>
+            <h2>Custom cockpit</h2>
+            <p class="hint">
+                These values are used by any bike set to <em>Custom</em> above. The search settings at the
+                bottom &mdash; spacer step, maximum stack, stem lengths and angles &mdash; apply to every
+                bike, whichever cockpit it uses.
+            </p>
+            <label>Start from a catalogue cockpit
+                <select @onchange="ApplyPreset" value="@presetId">
+                    <option value="">Custom</option>
+                    @foreach (var p in Library.Cockpits)
+                    {
+                        <option value="@p.Id">@p.Name</option>
+                    }
+                </select>
+            </label>
+            @if (Library.Cockpits.FirstOrDefault(p => p.Id == presetId) is { } preset)
+            {
+                <p class="hint">
+                    @preset.Notes
+                    @if (preset.SourceUrl is not null)
+                    {
+                        <a href="@preset.SourceUrl" target="_blank" rel="noreferrer">source</a>
+                    }
+                    @if (Library.IsCockpitOverridden(preset.Id))
+                    {
+                        <em class="edited">Saved with your corrections.</em>
+                    }
+                </p>
+            }
+            <div class="grid2">
+                <label title="Bottom face to top face of the stem body">
+                    Stem clamp height (mm)<input type="number" step="1" @bind="cockpit.StemClampHeight" @bind:event="oninput" />
+                </label>
+                <label title="Bottom of the stem to the centreline of the extension. Blank = half the clamp height.">
+                    Extension axis offset (mm)<input type="number" step="0.5" @bind="cockpit.StemAxisOffset" @bind:event="oninput" placeholder="@F1(cockpit.StemClampHeight / 2)" />
+                </label>
+                <label title="Diameter of the bar at the clamp - the thickness of the cockpit">
+                    Bar tube &#8960; (mm)<input type="number" step="0.1" @bind="cockpit.BarTubeDiameter" @bind:event="oninput" />
+                </label>
+                <label title="Positive if the bar centre sits above the stem extension axis">
+                    Bar offset off axis (mm)<input type="number" step="0.5" @bind="cockpit.BarCentreOffset" @bind:event="oninput" />
+                </label>
+                <label title="Clamp centre to the furthest forward point of the tops">
+                    Bar reach (mm)<input type="number" step="1" @bind="cockpit.BarReach" @bind:event="oninput" />
+                </label>
+                <label title="Tops down to the centre of the bar ends">
+                    Bar drop (mm)<input type="number" step="1" @bind="cockpit.BarDrop" @bind:event="oninput" />
+                </label>
+                <label title="Nominal size, centre to centre at the hoods / lever clamp">
+                    Bar width c-c (mm)<input type="number" step="5" @bind="cockpit.BarWidth" @bind:event="oninput" />
+                </label>
+                <label title="Flare at the drops, degrees per side">
+                    Drop flare (&#176;)<input type="number" step="0.5" @bind="cockpit.DropFlare" @bind:event="oninput" />
+                </label>
+                <label title="Vertical run the flare acts over. Not the whole drop - the bend curves through its upper half. Blank = 62% of the drop, calibrated against measured Rapide bars.">
+                    Flared run (mm)<input type="number" step="1" @bind="cockpit.FlareRun" @bind:event="oninput" placeholder="@F0(cockpit.BarDrop * 0.62)" />
+                </label>
+                <label>Max spacer stack (mm)<input type="number" step="5" @bind="cockpit.MaxSpacerStack" @bind:event="oninput" /></label>
+                <label>Spacer increment (mm)<input type="number" step="1" @bind="cockpit.SpacerStep" @bind:event="oninput" /></label>
+                <label>Stem lengths (mm)<input @bind="stemLengthsText" @bind:event="oninput" /></label>
+                <label>Stem angles (&#176;)<input @bind="stemAnglesText" @bind:event="oninput" /></label>
+            </div>
+
+            <p class="hint">
+                The headset stack is not here &mdash; it belongs to the frame, so it lives with each bike's
+                geometry and is edited through <em>edit</em> on the bike.
+            </p>
+
+            @if (cockpit.DropFlare > 0.01)
+            {
+                <ul class="derived">
+                    <li><span>Width at the hoods</span><b>@F0(cockpit.WidthAtHoods) mm</b></li>
+                    <li><span>Width at the drops</span><b>@F0(cockpit.WidthAtDrops) mm</b></li>
+                    <li><span>Flare spreads the drops by</span><b>@F1(cockpit.DropSpread) mm</b></li>
+                </ul>
+                @if (Library.Cockpits.FirstOrDefault(p => p.Id == presetId) is { BarWidths.Count: > 0 } wp)
+                {
+                    <p class="hint">Sizes this cockpit is sold in, hoods &#8594; drops:</p>
+                    <ul class="derived">
+                        @foreach (var w in wp.BarWidths)
+                        {
+                            <li class="@(Math.Abs(w - cockpit.BarWidth) < 0.5 ? "sel" : "")">
+                                <span>@F0(w) mm</span><b>@F0(w + cockpit.DropSpread) mm at the drops</b>
+                            </li>
+                        }
+                    </ul>
+                }
+            }
+
+            <div class="cockpit-save">
+                <button class="secondary" @onclick="SaveCockpitEdits" disabled="@(presetId.Length == 0)">
+                    Save these values to this cockpit
+                </button>
+                <button class="secondary" @onclick="() => showSaveAs = !showSaveAs">Save as a new cockpit</button>
+                @if (presetId.Length > 0 && Library.IsCockpitOverridden(presetId))
+                {
+                    <button class="link danger" @onclick="ResetCockpit">reset to catalogue values</button>
+                }
+                else if (Library.Cockpits.FirstOrDefault(p => p.Id == presetId) is { Source: "custom" } own)
+                {
+                    <button class="link danger" @onclick="() => DeleteCockpit(own)">delete this cockpit</button>
+                }
+                @if (showSaveAs)
+                {
+                    <label>Name<input @bind="newCockpitName" placeholder="e.g. Roval Rapide on my SL8" /></label>
+                    <button class="secondary" @onclick="SaveCockpitAsNew">Save</button>
+                }
+                @if (cockpitSaveMessage.Length > 0)
+                {
+                    <p class="hint">@cockpitSaveMessage</p>
+                }
+            </div>
+
+            <label class="check">
+                <input type="checkbox" @bind="cockpit.ContinuousLength" />
+                Integrated cockpit / exact length &mdash; any extension length is available
+            </label>
+            <label class="check">
+                <input type="checkbox" @bind="cockpit.FlatTops" />
+                Tops sit level &mdash; angle follows the head tube (HTA &minus; 90)
+            </label>
+            <label class="check">
+                <input type="checkbox" @bind="cockpit.FixedAngle" disabled="@cockpit.FlatTops" />
+                Lock to one known cockpit angle
+            </label>
+            @if (cockpit.FixedAngle)
+            {
+                <div class="grid2">
+                    <label>Cockpit angle (&#176;)<input type="number" step="0.5" @bind="cockpit.StemAngle" @bind:event="oninput" /></label>
+                    <label class="check inline"><input type="checkbox" @bind="cockpit.Flipped" /> mounted flipped</label>
+                </div>
+            }
+            <p class="hint">
+                Angles use the industry convention: measured from the perpendicular to the steerer, so a
+                &minus;17&#176; stem is horizontal on a 73&#176; head angle. An unsigned angle in the list is
+                tried both ways up; a signed one (e.g. &minus;16) only in that orientation.
+                <b>Level tops</b> overrides all of that: a one-piece aero cockpit quotes the angle of its
+                extension body, but the HB point sits on the tops, which are built to sit flat &mdash; so
+                the angle that matters follows the frame, not the part.
+            </p>
+        </section>
+
+        <section>
+            <h2>Bikes</h2>
+            <p class="hint">
+                Each bike carries its own cockpit, so stock builds compare side by side instead of being
+                forced through one shared cockpit.
+            </p>
+            @foreach (var bike in Library.All)
+            {
+                <label class="check bike-row">
+                    <input type="checkbox" checked="@selected.Contains(bike.Id)"
+                           @onchange="e => ToggleBike(bike.Id, (bool)(e.Value ?? false))" />
+                    <span>@bike.DisplayName <em>@bike.Sizes.Count sizes &#183; @bike.Source@HeadsetNote(bike)</em></span>
+                    <button class="link" @onclick="() => EditBike(bike)" @onclick:preventDefault>edit</button>
+                    @if (bike.Source != "library")
+                    {
+                        <button class="link danger" @onclick="() => Library.Remove(bike.Id)" @onclick:preventDefault>remove</button>
+                    }
+                </label>
+                @if (selected.Contains(bike.Id))
+                {
+                    <div class="bike-cockpit">
+                        <select value="@CockpitIdFor(bike.Id)" @onchange="e => AssignCockpit(bike.Id, e)">
+                            <option value="">Custom &mdash; the cockpit panel below</option>
+                            @foreach (var p in Library.Cockpits)
+                            {
+                                <option value="@p.Id">@p.Name</option>
+                            }
+                        </select>
+                    </div>
+                }
+            }
+            <button class="secondary" @onclick="() => showImport = !showImport">@(showImport ? "Hide" : "Add a bike")</button>
+            <DataTransfer Label="my bikes" DownloadUrl="export/bikes" FileName="bikefit-bikes.json" Import="Library.ImportUserBikes" />
+        </section>
+
+        @if (showImport)
+        {
+            <section class="import">
+                <h2>Add geometry</h2>
+                <label>Page URL (a dealer page, a brand page)
+                    <input @bind="importUrl" placeholder="https://..." />
+                </label>
+                <button class="secondary" @onclick="FetchAsync" disabled="@busy">@(busy ? "Fetching..." : "Fetch and parse")</button>
+                <p class="hint">
+                    Works on any page whose geometry table is plain HTML. geometrygeeks.bike is not one of
+                    those &mdash; it builds the table in the browser and serves randomised placeholder numbers
+                    to anything else, so fetching is blocked for it. Open the page, copy the table, paste it below.
+                </p>
+
+                <label>...or paste the geometry table
+                    <textarea rows="8" @bind="pasteText" placeholder="Size&#9;49&#9;52&#9;54&#10;Stack&#9;510&#9;530&#9;553&#10;Reach&#9;375&#9;383&#9;388&#10;Head tube angle&#9;71.5&#9;72.5&#9;73"></textarea>
+                </label>
+                <div class="grid2">
+                    <label>Brand<input @bind="importBrand" /></label>
+                    <label>Model<input @bind="importModel" /></label>
+                </div>
+                <button class="secondary" @onclick="ParsePaste">Parse table</button>
+
+                @if (importMessages.Count > 0)
+                {
+                    <ul class="messages">@foreach (var m in importMessages) { <li>@m</li> }</ul>
+                }
+
+                @if (pending is not null)
+                {
+                    <h3>@(editingExisting ? $"Editing {pending.DisplayName}" : "Check the numbers, then save")</h3>
+                    <div class="scroll">
+                        <table class="preview">
+                            <thead>
+                                <tr><th>Size</th><th>Stack</th><th>Reach</th><th>HTA</th><th>STA</th><th>Headset</th><th>HT len</th><th>CS</th><th>WB</th><th>Drop</th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var s in pending.Sizes)
+                                {
+                                    <tr>
+                                        <td><input class="tiny" @bind="s.Name" /></td>
+                                        <td><input class="tiny" type="number" @bind="s.Stack" /></td>
+                                        <td><input class="tiny" type="number" @bind="s.Reach" /></td>
+                                        <td><input class="tiny" type="number" step="0.1" @bind="s.HeadTubeAngle" /></td>
+                                        <td><input class="tiny" type="number" step="0.1" @bind="s.SeatTubeAngle" /></td>
+                                        <td><input class="tiny" type="number" step="0.5" @bind="s.HeadsetStack"
+                                                   placeholder="@F1(SizeGeometry.AssumedHeadsetStack)" title="Along the steerer, top of the head tube to the bottom of the stem. Blank = assume 12 mm." /></td>
+                                        <td><input class="tiny" type="number" @bind="s.HeadTubeLength" /></td>
+                                        <td><input class="tiny" type="number" @bind="s.ChainstayLength" /></td>
+                                        <td><input class="tiny" type="number" @bind="s.Wheelbase" /></td>
+                                        <td><input class="tiny" type="number" @bind="s.BbDrop" /></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <button class="secondary" @onclick="AddPendingSize">Add a size row</button>
+                    <button @onclick="SavePending">@(editingExisting ? "Save changes" : "Save to library")</button>
+                    <button class="secondary" @onclick="CancelPending">Cancel</button>
+                }
+                else
+                {
+                    <button class="secondary" @onclick="StartBlank">Enter a bike by hand</button>
+                }
+            </section>
+        }
+    </aside>
+
+    <main class="results">
+        @if (solutions.Count == 0)
+        {
+            <div class="empty">Select at least one bike to see results.</div>
+        }
+        else
+        {
+            <section>
+                <div class="section-head">
+                    <h2>Builds that hit the target</h2>
+                    <label class="sort">Rank by
+                        <select @bind="sortMode">
+                            <option value="@SortMode.Practical">Most practical build</option>
+                            <option value="@SortMode.Closest">Smallest miss</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="scroll">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Bike</th><th>Cockpit</th><th>Size</th><th>Stem</th><th>Angle</th><th>Spacers</th>
+                                <th>Exact stem</th><th>Exact spacers</th><th>Miss X</th><th>Miss Y</th><th>Miss</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var s in solutions.Take(showAll ? 200 : 12))
+                            {
+                                <tr class="@RowClass(s)" @onclick="() => Select(s)">
+                                    <td>@s.Bike.DisplayName</td>
+                                    <td>@s.CockpitName</td>
+                                    <td class="strong">@s.Size.Name</td>
+                                    <td class="strong">@F0(s.StemLength) mm</td>
+                                    <td>@Sign(s.StemAngle)&#176; <em>@Sign(s.StemAngleFromHorizontal)&#176; from horizontal@(s.Flipped ? ", angle down" : "")</em></td>
+                                    <td class="strong">@s.SpacerCount &#215; @F0(s.Cockpit.SpacerStep) = @F0(s.SpacerStack) mm</td>
+                                    <td>@F1(s.IdealStemLength)</td>
+                                    <td>@F1(s.IdealSpacerStack)</td>
+                                    <td>@Signed(s.ErrorX)</td>
+                                    <td>@Signed(s.ErrorY)</td>
+                                    <td class="strong">@F1(s.Error)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                @if (solutions.Count > 12)
+                {
+                    <button class="link" @onclick="() => showAll = !showAll">@(showAll ? "Show top 12" : $"Show all {solutions.Count}")</button>
+                }
+            </section>
+
+            @if (current is not null)
+            {
+                <section>
+                    <h2>@current.Bike.DisplayName &#183; size @current.Size.Name</h2>
+                    <div class="verdict @(current.WithinTolerance ? "ok" : "off")">
+                        @if (current.WithinTolerance)
+                        {
+                            <span>Bar lands within @F1(current.Error) mm of the HB target.</span>
+                        }
+                        else
+                        {
+                            <span>Closest achievable build is @F1(current.Error) mm off the HB target
+                                (@Signed(current.ErrorX) mm horizontal, @Signed(current.ErrorY) mm vertical).</span>
+                        }
+                    </div>
+                    <ul class="callouts">
+                        <li><span>Stem</span><b>@F0(current.StemLength) mm, @Sign(current.StemAngle)&#176; installed@(current.Flipped ? " (angle down)" : "")</b></li>
+                        <li><span>Stem angle from horizontal</span><b>@Sign(current.StemAngleFromHorizontal)&#176;</b></li>
+                        <li><span>Cockpit</span><b>@current.CockpitName</b></li>
+                        <li><span>Spacers under the stem</span><b>@current.SpacerCount &#215; @F0(current.Cockpit.SpacerStep) mm = @F0(current.SpacerStack) mm</b></li>
+                        <li><span>Headset stack (frame)</span>
+                            <b>@F1(current.Size.EffectiveHeadsetStack) mm@(current.Size.HeadsetStack is null ? " assumed" : "")</b></li>
+                        <li><span>Exact stem length</span><b>@F1(current.IdealStemLength) mm</b></li>
+                        <li><span>Exact spacer stack</span><b>@F1(current.IdealSpacerStack) mm</b></li>
+                        <li><span>Bar centre reached</span><b>@F1(current.BarCentre.X) / @F1(current.BarCentre.Y)</b></li>
+                        <li><span>Saddle on the rails (+ forward of the cradle)</span>
+                            <b class="@(SaddleFit.WithinRailRange ? "" : "over")">@Signed(SaddleFit.ForwardOfCradle) mm</b></li>
+                        <li><span>Setback this post can reach</span>
+                            <b class="@(SaddleFit.WithinRailRange ? "" : "over")">@F0(SaddleFit.MinSetback)&#8211;@F0(SaddleFit.MaxSetback) mm</b></li>
+                    </ul>
+                    @if (current.Warnings.Count > 0)
+                    {
+                        <ul class="messages warn">@foreach (var w in current.Warnings) { <li>@w</li> }</ul>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(current.Bike.Notes))
+                    {
+                        <p class="hint note">
+                            @current.Bike.Notes
+                            @if (current.Bike.SourceUrl is not null)
+                            {
+                                <a href="@current.Bike.SourceUrl" target="_blank" rel="noreferrer">source</a>
+                            }
+                        </p>
+                    }
+
+                    <BikeDiagram Bike="current.Bike" Size="current.Size" Cockpit="current.Cockpit" Target="target"
+                                 SpacerStack="current.SpacerStack" StemLength="current.StemLength" StemAngle="current.StemAngle" />
+
+                    <CockpitDiagram Size="current.Size" Cockpit="current.Cockpit" Target="target"
+                                    SpacerStack="current.SpacerStack" StemLength="current.StemLength" StemAngle="current.StemAngle" />
+
+                    <SaddleDiagram Size="current.Size" Target="target" Saddle="saddle" />
+
+                    <RailDiagram Size="current.Size" Target="target" Saddle="saddle" />
+                </section>
+            }
+        }
+    </main>
+</div>
+
+@code {
+    private readonly FitTarget target = new();
+    private CockpitSpec cockpit = new();
+    private SaddleSpec saddle = new();
+    private readonly FitSolver solver = new();
+    private readonly HashSet<string> selected = [];
+    /// <summary>Bike id -> cockpit preset id. Absent means the custom cockpit.</summary>
+    private readonly Dictionary<string, string> bikeCockpits = [];
+
+    private List<FitSolution> solutions = [];
+    private FitSolution? current;
+    private RiderMetrics metrics = new(0, 0, 0, 0, 0);
+    private bool showAll;
+
+    private enum SortMode { Practical, Closest }
+    private SortMode sortMode = SortMode.Practical;
+
+    // import / edit panel state
+    private bool showImport, busy, editingExisting;
+    private string importUrl = "", pasteText = "", importBrand = "", importModel = "";
+    private BikeModel? pending;
+    private List<string> importMessages = [];
+
+    private string stemLengthsText = "60, 70, 80, 90, 100, 110, 120, 130, 140";
+    private string stemAnglesText = "6, 7, 8, 10, 12, 17";
+    private string presetId = "", newCockpitName = "", cockpitSaveMessage = "";
+    private string fitId = "", newFitName = "";
+    private bool showSaveAs;
+
+    protected override void OnInitialized()
+    {
+        Library.Changed += OnLibraryChanged;
+        Fits.Changed += OnLibraryChanged;
+
+        if (Settings.Load() is { } saved)
+            Restore(saved);
+        else
+            OpenOnDefaults();
+    }
+
+    /// <summary>First run: the most recently saved fit if there is one, and the first bike.</summary>
+    private void OpenOnDefaults()
+    {
+        if (Fits.All.LastOrDefault() is { } fit)
+        {
+            fitId = fit.Id;
+            newFitName = fit.Name;
+            fit.ApplyTo(target);
+        }
+        foreach (var b in Library.All.Take(1)) selected.Add(b.Id);
+    }
+
+    private void Restore(UserSettings saved)
+    {
+        saved.Target.ApplyTo(target);
+        saddle = saved.Saddle;
+        cockpit = saved.Cockpit;
+        stemLengthsText = JoinNumbers(cockpit.StemLengths);
+        stemAnglesText = JoinNumbers(cockpit.StemAngles);
+        presetId = saved.CockpitPresetId;
+
+        // ids may point at things deleted since the settings were written
+        if (Fits.All.FirstOrDefault(f => f.Id == saved.FitId) is { } fit)
+        {
+            fitId = fit.Id;
+            newFitName = fit.Name;
+        }
+        foreach (var id in saved.SelectedBikeIds.Where(id => Library.Find(id) is not null))
+            selected.Add(id);
+        if (selected.Count == 0)
+            foreach (var b in Library.All.Take(1)) selected.Add(b.Id);
+        foreach (var (bikeId, cockpitId) in saved.BikeCockpits)
+            bikeCockpits[bikeId] = cockpitId;
+        if (Enum.TryParse<SortMode>(saved.SortMode, out var mode))
+            sortMode = mode;
+    }
+
+    private UserSettings Capture() => new()
+    {
+        Target = FitProfile.CaptureFrom(target, "", ""),
+        FitId = fitId,
+        Saddle = saddle,
+        Cockpit = cockpit,
+        CockpitPresetId = presetId,
+        SelectedBikeIds = [.. selected],
+        BikeCockpits = new Dictionary<string, string>(bikeCockpits),
+        SortMode = sortMode.ToString()
+    };
+
+    private static string JoinNumbers(IEnumerable<double> values) =>
+        string.Join(", ", values.Select(v => v.ToString("0.#", CultureInfo.InvariantCulture)));
+
+    public void Dispose()
+    {
+        Library.Changed -= OnLibraryChanged;
+        Fits.Changed -= OnLibraryChanged;
+    }
+
+    private void OnLibraryChanged() => InvokeAsync(StateHasChanged);
+
+    protected override void OnParametersSet() => Recalculate();
+
+    // every input uses oninput binding, so a re-render means something changed
+    protected override bool ShouldRender()
+    {
+        Recalculate();
+        Settings.Save(Capture());
+        return true;
+    }
+
+    private void Recalculate()
+    {
+        cockpit.StemLengths = ParseNumbers(stemLengthsText, [100]);
+        cockpit.StemAngles = ParseNumbers(stemAnglesText, [6]);
+        metrics = FitSolver.Metrics(target);
+
+        var entries = Library.All
+            .Where(b => selected.Contains(b.Id))
+            .Select(BuildCandidate)
+            .ToList();
+        var found = solver.Solve(entries, target);
+        solutions = (sortMode == SortMode.Closest
+            ? found.OrderBy(s => s.Error).ThenBy(s => s.Score)
+            : found.OrderBy(s => s.Score)).ToList();
+
+        if (current is not null)
+        {
+            current = solutions.FirstOrDefault(s =>
+                s.Bike.Id == current.Bike.Id && s.Size.Name == current.Size.Name && Math.Abs(s.StemAngle - current.StemAngle) < 0.01);
+        }
+        current ??= solutions.FirstOrDefault();
+    }
+
+    private SaddleMath.Chain SaddleFit => SaddleMath.Build(current!.Size, target, saddle);
+
+    private string CockpitIdFor(string bikeId) => bikeCockpits.GetValueOrDefault(bikeId, "");
+
+    private void AssignCockpit(string bikeId, ChangeEventArgs e)
+    {
+        var id = e.Value?.ToString() ?? "";
+        if (id.Length == 0) bikeCockpits.Remove(bikeId); else bikeCockpits[bikeId] = id;
+        current = null;
+    }
+
+    /// <summary>
+    /// Pairs a bike with the cockpit it should be solved against. A preset overrides the part
+    /// dimensions but inherits the search settings - spacer step, limits, stem lengths and angles -
+    /// from the custom spec, so every bike is compared on the same terms.
+    /// </summary>
+    private FitSolver.Candidate BuildCandidate(BikeModel bike)
+    {
+        var id = CockpitIdFor(bike.Id);
+        if (Library.Cockpits.FirstOrDefault(p => p.Id == id) is not { } preset)
+            return new FitSolver.Candidate(bike, cockpit, "Custom");
+
+        var spec = cockpit.Clone();
+        preset.ApplyTo(spec);
+        return new FitSolver.Candidate(bike, spec, preset.Name);
+    }
+
+    private string HeadsetNote(BikeModel bike) =>
+        bike.Sizes.Any(s => s.HeadsetStack is null) ? " · headset stack not set" : "";
+
+    private void Select(FitSolution s) => current = s;
+
+    private void ApplyFit(ChangeEventArgs e)
+    {
+        fitId = e.Value?.ToString() ?? "";
+        if (Fits.All.FirstOrDefault(f => f.Id == fitId) is not { } fit) return;
+        fit.ApplyTo(target);
+        newFitName = fit.Name;
+        current = null;
+    }
+
+    private void SaveFit()
+    {
+        var name = string.IsNullOrWhiteSpace(newFitName) ? "Fit" : newFitName.Trim();
+        var id = fitId.Length > 0 ? fitId : Guid.NewGuid().ToString("N")[..8];
+        Fits.Save(FitProfile.CaptureFrom(target, id, name));
+        fitId = id;
+    }
+
+    private void DeleteFit(string id)
+    {
+        Fits.Remove(id);
+        fitId = "";
+    }
+
+    private void ApplyPreset(ChangeEventArgs e)
+    {
+        presetId = e.Value?.ToString() ?? "";
+        cockpitSaveMessage = "";
+        if (Library.Cockpits.FirstOrDefault(p => p.Id == presetId) is not { } preset) return;
+        preset.ApplyTo(cockpit);
+        stemLengthsText = string.Join(", ", cockpit.StemLengths.Select(v => v.ToString("0.#", CultureInfo.InvariantCulture)));
+        stemAnglesText = cockpit.StemAngle.ToString("0.#", CultureInfo.InvariantCulture);
+        current = null;
+    }
+
+    /// <summary>Writes the cockpit fields as they stand back over the selected preset.</summary>
+    private void SaveCockpitEdits()
+    {
+        if (Library.Cockpits.FirstOrDefault(p => p.Id == presetId) is not { } preset) return;
+        Library.SaveCockpit(CockpitPreset.CaptureFrom(cockpit, preset.Id, preset.Name, preset));
+        cockpitSaveMessage = $"Saved to {preset.Name}. The headset stack is not part of a cockpit - it lives with each bike.";
+    }
+
+    /// <summary>
+    /// Drops the saved correction and puts the catalogue values back on screen. Fields the
+    /// catalogue does not specify - the headset stack, unless the preset carries one - keep
+    /// whatever is in them, since there is nothing published to reset them to.
+    /// </summary>
+    private void ResetCockpit()
+    {
+        var id = presetId;
+        Library.ResetCockpit(id);
+        if (Library.Cockpits.FirstOrDefault(p => p.Id == id) is not { } catalogue) return;
+        catalogue.ApplyTo(cockpit);
+        stemLengthsText = string.Join(", ", cockpit.StemLengths.Select(v => v.ToString("0.#", CultureInfo.InvariantCulture)));
+        stemAnglesText = cockpit.StemAngle.ToString("0.#", CultureInfo.InvariantCulture);
+        cockpitSaveMessage = $"{catalogue.Name} is back to its catalogue values. The headset stack is not published for it, so that field is unchanged.";
+        current = null;
+    }
+
+    /// <summary>Removes a cockpit the user added. The values stay in the form; only the entry goes.</summary>
+    private void DeleteCockpit(CockpitPreset preset)
+    {
+        Library.ResetCockpit(preset.Id);
+        presetId = "";
+        cockpitSaveMessage = $"Deleted {preset.Name}. The values are still in the form.";
+    }
+
+    private void SaveCockpitAsNew()
+    {
+        var name = string.IsNullOrWhiteSpace(newCockpitName) ? "Custom cockpit" : newCockpitName.Trim();
+        var basedOn = Library.Cockpits.FirstOrDefault(p => p.Id == presetId);
+        var id = Guid.NewGuid().ToString("N")[..8];
+        Library.SaveCockpit(CockpitPreset.CaptureFrom(cockpit, id, name, basedOn));
+        presetId = id;
+        showSaveAs = false;
+        newCockpitName = "";
+        cockpitSaveMessage = $"Saved {name}.";
+    }
+
+    private void ToggleBike(string id, bool on)
+    {
+        if (on) selected.Add(id); else selected.Remove(id);
+        current = null;
+    }
+
+    private static List<double> ParseNumbers(string text, List<double> fallback)
+    {
+        var values = text.Split([',', ';', ' ', '\t'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(t => double.TryParse(t.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : double.NaN)
+            .Where(v => !double.IsNaN(v))
+            .Distinct()
+            .OrderBy(v => v)
+            .ToList();
+        return values.Count > 0 ? values : fallback;
+    }
+
+    private async Task FetchAsync()
+    {
+        if (string.IsNullOrWhiteSpace(importUrl)) return;
+        busy = true;
+        var result = await Importer.FetchAsync(importUrl);
+        busy = false;
+        importMessages = result.Messages;
+        if (result.Bike is not null)
+        {
+            pending = result.Bike;
+            editingExisting = false;
+            importBrand = string.IsNullOrWhiteSpace(importBrand) ? pending.Brand : importBrand;
+            importModel = string.IsNullOrWhiteSpace(importModel) ? pending.Model : importModel;
+        }
+    }
+
+    private void ParsePaste()
+    {
+        if (string.IsNullOrWhiteSpace(pasteText)) return;
+        var result = Importer.ParseTable(pasteText, importBrand, importModel);
+        importMessages = result.Messages;
+        pending = result.Bike;
+        editingExisting = false;
+    }
+
+    private void StartBlank()
+    {
+        pending = new BikeModel { Brand = importBrand, Model = importModel, Source = "manual" };
+        editingExisting = false;
+        AddPendingSize();
+    }
+
+    /// <summary>Loads a bike into the editable preview grid. Library bikes are edited as a copy.</summary>
+    private void EditBike(BikeModel bike)
+    {
+        pending = bike.Clone();
+        if (bike.Source == "library")
+        {
+            pending.Id = Guid.NewGuid().ToString("N")[..8];
+            pending.Model += " (edited)";
+            pending.Source = "manual";
+            importMessages = ["Built-in bikes are read-only, so this will be saved as an editable copy."];
+        }
+        else
+        {
+            importMessages = [];
+        }
+        editingExisting = bike.Source != "library";
+        importBrand = pending.Brand;
+        importModel = pending.Model;
+        showImport = true;
+    }
+
+    private void CancelPending()
+    {
+        pending = null;
+        editingExisting = false;
+        importMessages = [];
+    }
+
+    private void AddPendingSize()
+    {
+        pending ??= new BikeModel { Brand = importBrand, Model = importModel, Source = "manual" };
+        pending.Sizes.Add(new SizeGeometry { Name = $"Size {pending.Sizes.Count + 1}", HeadTubeAngle = 73, SeatTubeAngle = 73.5 });
+    }
+
+    private void SavePending()
+    {
+        if (pending is null) return;
+        pending.Brand = string.IsNullOrWhiteSpace(importBrand) ? pending.Brand : importBrand;
+        pending.Model = string.IsNullOrWhiteSpace(importModel) ? pending.Model : importModel;
+        if (string.IsNullOrWhiteSpace(pending.Brand) && string.IsNullOrWhiteSpace(pending.Model))
+            pending.Model = "Untitled bike";
+        Library.AddOrReplace(pending);
+        selected.Add(pending.Id);
+        importMessages = [$"Saved {pending.DisplayName} with {pending.Sizes.Count} sizes."];
+        pending = null;
+        editingExisting = false;
+        current = null;
+    }
+
+    private string RowClass(FitSolution s)
+    {
+        var cls = s == current ? "sel " : "";
+        if (!s.SpacerStackFeasible || !s.StemLengthFeasible) return cls + "bad";
+        return cls + (s.WithinTolerance ? "good" : "near");
+    }
+
+    private static string F0(double v) => v.ToString("0", CultureInfo.InvariantCulture);
+    private static string F1(double v) => v.ToString("0.0", CultureInfo.InvariantCulture);
+    private static string Signed(double v) => (v >= 0 ? "+" : "") + v.ToString("0.0", CultureInfo.InvariantCulture);
+    private static string Sign(double v) => (v >= 0 ? "+" : "") + v.ToString("0.#", CultureInfo.InvariantCulture);
+}

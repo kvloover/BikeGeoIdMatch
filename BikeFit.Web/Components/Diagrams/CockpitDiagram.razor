@@ -1,0 +1,281 @@
+@using BikeFit.Web.Models
+@using BikeFit.Web.Services
+@using System.Globalization
+
+@*
+    Every dimension is drawn offset perpendicular to the thing it measures, so the steerer-axis
+    dimensions stay parallel to the steerer and the stem length stays parallel to the stem
+    however the cockpit is angled.
+*@
+
+<svg class="diagram" viewBox="@($"0 0 {W} {H}")" xmlns="http://www.w3.org/2000/svg" role="img"
+     aria-label="Detail drawing of the cockpit stack, stem and handlebar">
+    <defs>
+        <marker id="c-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill="var(--dim)" />
+        </marker>
+        <marker id="c-arrow-start" markerWidth="8" markerHeight="8" refX="1" refY="4" orient="auto">
+            <path d="M8,0 L0,4 L8,8 z" fill="var(--dim)" />
+        </marker>
+    </defs>
+
+    <rect x="0" y="0" width="@W" height="@H" class="canvas" />
+
+    @* ---- head tube, steerer, headset, spacers, stem ---- *@
+    <polygon points="@Rect(htStub, htt, 44)" class="part head-tube-part" />
+    <polygon points="@Rect(htt, stemTop, 30)" class="part steerer" />
+    <polygon points="@Rect(htt, headsetTop, 46)" class="part headset-part" />
+    @foreach (var (a, b) in Spacers())
+    {
+        <polygon points="@Rect(a, b, 43)" class="part spacer-part" />
+    }
+    @if (Cockpit.OnePiece)
+    {
+        @* one swept body: no stem block, no bar clamp, because the part has neither *@
+        <g class="onepiece">
+            <path d="@DropBar.Path(barCentre, Cockpit, Proj)" class="drop" />
+            <path d="@OnePieceCockpit.Path(chain, Cockpit, Proj)" class="part stem-part" />
+            <line x1="@Px(pivot)" y1="@Py(pivot)" x2="@Px(barClamp)" y2="@Py(barClamp)" class="axis-line" />
+            <circle cx="@Px(barCentre)" cy="@Py(barCentre)" r="2.5" class="bb" />
+        </g>
+    }
+    else
+    {
+        <g class="twopiece">
+            <polygon points="@Rect(spacerTop, stemTop, 50)" class="part stem-part" />
+            <polygon points="@Rect(pivot, barClamp, 30)" class="part stem-part" />
+            <line x1="@Px(pivot)" y1="@Py(pivot)" x2="@Px(barClamp)" y2="@Py(barClamp)" class="axis-line" />
+            <path d="@DropBar.Path(barCentre, Cockpit, Proj)" class="drop" />
+            <circle cx="@Px(barCentre)" cy="@Py(barCentre)" r="@S(Cockpit.BarTubeDiameter / 2 + 6)" class="bar-clamp" />
+            <circle cx="@Px(barCentre)" cy="@Py(barCentre)" r="@S(Cockpit.BarTubeDiameter / 2)" class="bar-tube" />
+            <circle cx="@Px(barCentre)" cy="@Py(barCentre)" r="2.5" class="bb" />
+        </g>
+    }
+
+    @* ---- steerer-axis chain: headset in front, spacers and clamp behind ---- *@
+    <g class="dims">
+        <line x1="@Dx1(htt, headsetTop, HeadsetSide)" y1="@Dy1(htt, headsetTop, HeadsetSide)"
+              x2="@Dx2(htt, headsetTop, HeadsetSide)" y2="@Dy2(htt, headsetTop, HeadsetSide)"
+              class="dim" marker-start="url(#c-arrow-start)" marker-end="url(#c-arrow)" />
+        <text x="@Tx(htt, headsetTop, HeadsetSide + 8)" y="@Ty(htt, headsetTop, HeadsetSide + 8)" class="dim-label" text-anchor="end">
+            headset @F(Size.EffectiveHeadsetStack)@(Size.HeadsetStack is null ? "?" : "")
+        </text>
+
+        @if (SpacerStack > 0.01)
+        {
+            <g class="spacer-dim">
+                <line x1="@Dx1(headsetTop, spacerTop, StackSide)" y1="@Dy1(headsetTop, spacerTop, StackSide)"
+                      x2="@Dx2(headsetTop, spacerTop, StackSide)" y2="@Dy2(headsetTop, spacerTop, StackSide)"
+                      class="dim" marker-start="url(#c-arrow-start)" marker-end="url(#c-arrow)" />
+                <text x="@Tx(headsetTop, spacerTop, StackSide + 8)" y="@Ty(headsetTop, spacerTop, StackSide + 8)"
+                      class="dim-label" text-anchor="end">
+                    spacers @SpacerCount &#215; @F(Cockpit.SpacerStep) = @F(SpacerStack)
+                </text>
+            </g>
+        }
+
+        <line x1="@Dx1(spacerTop, stemTop, StackSide)" y1="@Dy1(spacerTop, stemTop, StackSide)"
+              x2="@Dx2(spacerTop, stemTop, StackSide)" y2="@Dy2(spacerTop, stemTop, StackSide)"
+              class="dim" marker-start="url(#c-arrow-start)" marker-end="url(#c-arrow)" />
+        <text x="@Tx(spacerTop, stemTop, StackSide + 8)" y="@Ty(spacerTop, stemTop, StackSide + 8)"
+              class="dim-label" text-anchor="end">
+            @(Cockpit.OnePiece ? "steerer clamp" : "stem clamp") @F(Cockpit.StemClampHeight), axis at +@F(Cockpit.EffectiveStemAxisOffset)
+        </text>
+
+        @* ---- stem length, measured along the stem axis ---- *@
+        <line x1="@Dx1(pivot, barClamp, StemSide)" y1="@Dy1(pivot, barClamp, StemSide)"
+              x2="@Dx2(pivot, barClamp, StemSide)" y2="@Dy2(pivot, barClamp, StemSide)"
+              class="dim" marker-start="url(#c-arrow-start)" marker-end="url(#c-arrow)" />
+        <text x="@Tx(pivot, barClamp, StemSide + 10)" y="@Ty(pivot, barClamp, StemSide + 10)"
+              class="dim-label" text-anchor="middle">
+            stem @Len(StemLength) mm
+        </text>
+
+        @* ---- bar tube diameter, off to the side of the clamp ---- *@
+        <line x1="@(Px(barCentre) + S(46))" y1="@(Py(barCentre) - S(Cockpit.BarTubeDiameter / 2))"
+              x2="@(Px(barCentre) + S(46))" y2="@(Py(barCentre) + S(Cockpit.BarTubeDiameter / 2))"
+              class="dim" marker-start="url(#c-arrow-start)" marker-end="url(#c-arrow)" />
+        <line x1="@(Px(barCentre) + S(14))" y1="@Py(barCentre)" x2="@(Px(barCentre) + S(46))" y2="@Py(barCentre)"
+              class="dim faint" />
+        <text x="@(Px(barCentre) + S(52))" y="@(Py(barCentre) + 4)" class="dim-label">bar &#8960; @Cockpit.BarTubeDiameter.ToString("0.#") mm</text>
+
+        @* ---- bar reach and drop ---- *@
+        <line x1="@Px(barCentre)" y1="@(Py(barCentre) - S(30))" x2="@Px(barFront)" y2="@(Py(barCentre) - S(30))"
+              class="dim" marker-start="url(#c-arrow-start)" marker-end="url(#c-arrow)" />
+        <text x="@Px(Mid(barCentre, barFront))" y="@(Py(barCentre) - S(30) - 6)" class="dim-label" text-anchor="middle">
+            bar reach @F(Cockpit.BarReach)
+        </text>
+        <line x1="@(Px(barEnd) - S(34))" y1="@Py(barCentre)" x2="@(Px(barEnd) - S(34))" y2="@Py(barEnd)"
+              class="dim" marker-start="url(#c-arrow-start)" marker-end="url(#c-arrow)" />
+        <text x="@(Px(barEnd) - S(40))" y="@Py(Mid(barCentre, barEnd))" class="dim-label" text-anchor="end">
+            bar drop @F(Cockpit.BarDrop)
+        </text>
+    </g>
+
+    @*
+        Angle references at the stem pivot. The numbers live in a fixed corner block rather than
+        floating next to the arcs - when the stem sits near horizontal the two reference rays almost
+        coincide and any label placed on them collides with the bar.
+    *@
+    <g class="angles">
+        <line x1="@Px(pivot)" y1="@Py(pivot)" x2="@(Px(pivot) + S(RefLen))" y2="@Py(pivot)" class="ref-line" />
+        <line x1="@Px(pivot)" y1="@Py(pivot)" x2="@Px(PerpEnd)" y2="@Py(PerpEnd)" class="ref-line" />
+        <path d="@Arc(pivot, RefLen * 0.80, 0, FromHorizontal)" class="arc" />
+        <path d="@Arc(pivot, RefLen * 0.42, PerpAngle, FromHorizontal)" class="arc arc-2" />
+    </g>
+
+    <g class="angle-block">
+        <text x="@(W - 12)" y="22" class="angle-label angle-label-2" text-anchor="end">stem @Sign(StemAngle)&#176; as specified</text>
+        <text x="@(W - 12)" y="38" class="angle-label" text-anchor="end">@Sign(FromHorizontal)&#176; from horizontal as fitted</text>
+        <text x="@(W - 12)" y="54" class="angle-label" text-anchor="end">
+            head angle @Size.HeadTubeAngle.ToString("0.#", CultureInfo.InvariantCulture)&#176;, so &#8869; steerer = +@((90 - Size.HeadTubeAngle).ToString("0.#", CultureInfo.InvariantCulture))&#176;
+        </text>
+    </g>
+
+    @* ---- target ---- *@
+    <g class="target">
+        <circle cx="@Px(HbTarget)" cy="@Py(HbTarget)" r="4" class="target-dot" />
+        <line x1="@(Px(HbTarget) - 10)" y1="@Py(HbTarget)" x2="@(Px(HbTarget) + 10)" y2="@Py(HbTarget)" class="cross" />
+        <line x1="@Px(HbTarget)" y1="@(Py(HbTarget) - 10)" x2="@Px(HbTarget)" y2="@(Py(HbTarget) + 10)" class="cross" />
+        <text x="@Px(HbTarget)" y="@(Py(HbTarget) - S(Cockpit.BarTubeDiameter / 2 + 6) - 8)" class="pt-label" text-anchor="middle">target HB</text>
+    </g>
+
+    <text x="12" y="22" class="title">Cockpit detail &#183; size @Size.Name</text>
+    <text x="12" y="40" class="subtitle">
+        head tube top (@F(Size.Reach) / @F(Size.Stack)) &#8594; bar centre (@F(barCentre.X) / @F(barCentre.Y))
+    </text>
+    <text x="12" y="@(H - 12)" class="scale-note">
+        HB taken at @HbWhere &#183; miss @Sign(HbActual.X - Target.HbX) mm horizontal / @Sign(HbActual.Y - Target.HbZ) mm vertical
+        &#183; 1 mm = @Proj.Scale.ToString("0.000") px
+    </text>
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public SizeGeometry Size { get; set; } = default!;
+    [Parameter, EditorRequired] public CockpitSpec Cockpit { get; set; } = default!;
+    [Parameter, EditorRequired] public FitTarget Target { get; set; } = default!;
+    [Parameter] public double SpacerStack { get; set; }
+    [Parameter] public double StemLength { get; set; } = 100;
+    [Parameter] public double StemAngle { get; set; } = -6;
+    [Parameter] public double W { get; set; } = 940;
+    [Parameter] public double H { get; set; } = 520;
+
+    // Normal(a,b) rotates a->b a quarter turn anticlockwise, so for segments running up the
+    // steerer a positive offset lands BEHIND the steerer and for the pivot->clamp segment a
+    // positive offset lands ABOVE the stem. Parts are ~25 mm half-width at their widest.
+    private const double HeadsetSide = 42;   // headset dim: behind the steerer, close in
+    private const double StackSide = 42;     // spacer + clamp dims: chained behind the steerer
+    private const double StemSide = 42;      // stem length dim: above the extension, clear of the bar drop
+
+    private Projector Proj = default!;
+    private CockpitMath.Chain chain = default!;
+    private Pt htStub, htt, headsetTop, spacerTop, stemTop, pivot, barClamp, barCentre;
+    private Pt barFront, barEnd, HbActual, HbTarget, PerpEnd;
+    private Pt U, PerpDir;
+    private double FromHorizontal, PerpAngle, RefLen = 120;
+    private int SpacerCount;
+    private string HbWhere = "";
+
+    protected override void OnParametersSet()
+    {
+        chain = CockpitMath.Build(Size, Cockpit, SpacerStack, StemLength, StemAngle);
+        U = chain.SteererAxisUp;
+        PerpDir = Pt.FromAngle(90 - Size.HeadTubeAngle);   // perpendicular to the steerer, forward
+        PerpAngle = 90 - Size.HeadTubeAngle;
+        FromHorizontal = chain.StemAngleFromHorizontal;
+
+        htt = chain.HeadTubeTop;
+        htStub = htt + U * -55;
+        headsetTop = chain.HeadsetTop;
+        spacerTop = chain.SpacerTop;
+        stemTop = spacerTop + U * Cockpit.StemClampHeight;
+        pivot = chain.StemPivot;
+        barClamp = chain.BarClampCentre;
+        barCentre = chain.BarCentre;
+        barFront = DropBar.FrontOfTops(barCentre, Cockpit);
+        barEnd = DropBar.End(barCentre, Cockpit);
+
+        HbActual = CockpitMath.HbFromBarCentre(barCentre, Target, Cockpit);
+        HbTarget = new Pt(Target.HbX, Target.HbZ);
+        HbWhere = Target.HbReference switch
+        {
+            HbReference.BarTop => "the top of the bar tube",
+            HbReference.BarFront => "the front of the bar tops",
+            _ => "the bar tube centre"
+        };
+
+        PerpEnd = pivot + PerpDir * (RefLen * 0.75);
+
+        SpacerCount = (int)Math.Round(SpacerStack / Math.Max(0.5, Cockpit.SpacerStep));
+
+        var pts = new List<Pt>
+        {
+            htStub, htt, headsetTop, spacerTop, stemTop, pivot, barClamp, barCentre,
+            barFront, barEnd, HbTarget, PerpEnd,
+            pivot + Pt.FromAngle(0, RefLen * 1.55),
+            Offset(htt, headsetTop, HeadsetSide + 75),      // dim labels extend behind the steerer
+            Offset(spacerTop, stemTop, StackSide + 95),
+            Offset(pivot, barClamp, StemSide + 25),
+            barCentre + new Pt(110, 40), barEnd + new Pt(-60, 0)
+        };
+        Proj = new Projector(pts, W, H, marginMm: 12, marginPx: 44);
+    }
+
+    private IEnumerable<(Pt A, Pt B)> Spacers()
+    {
+        var step = Math.Max(0.5, Cockpit.SpacerStep);
+        var n = (int)Math.Round(SpacerStack / step);
+        for (var i = 0; i < n; i++)
+            yield return (headsetTop + U * (i * step), headsetTop + U * ((i + 1) * step));
+    }
+
+    /// <summary>Unit normal of a-&gt;b, rotated a quarter turn anticlockwise.</summary>
+    private static Pt Normal(Pt a, Pt b)
+    {
+        var d = b - a;
+        var len = d.Length;
+        return len < 1e-6 ? new Pt(0, 0) : new Pt(-d.Y / len, d.X / len);
+    }
+
+    private static Pt Offset(Pt p, Pt a, Pt b, double mm) => p + Normal(a, b) * mm;
+    private static Pt Offset(Pt a, Pt b, double mm) => Mid(a, b) + Normal(a, b) * mm;
+    private static Pt Mid(Pt a, Pt b) => new((a.X + b.X) / 2, (a.Y + b.Y) / 2);
+
+    // dimension line endpoints and label anchor, all offset perpendicular to the measured segment
+    private double Dx1(Pt a, Pt b, double mm) => Px(Offset(a, a, b, mm));
+    private double Dy1(Pt a, Pt b, double mm) => Py(Offset(a, a, b, mm));
+    private double Dx2(Pt a, Pt b, double mm) => Px(Offset(b, a, b, mm));
+    private double Dy2(Pt a, Pt b, double mm) => Py(Offset(b, a, b, mm));
+    private double Tx(Pt a, Pt b, double mm) => Px(Offset(a, b, mm));
+    private double Ty(Pt a, Pt b, double mm) => Py(Offset(a, b, mm)) + 4;
+
+    private double Px(Pt p) => Math.Round(Proj.X(p), 2);
+    private double Py(Pt p) => Math.Round(Proj.Y(p), 2);
+    private double S(double mm) => Math.Round(Proj.L(mm), 2);
+
+    /// <summary>Polygon points for a rectangle whose centreline runs from a to b, given width in mm.</summary>
+    private string Rect(Pt a, Pt b, double widthMm)
+    {
+        var n = Normal(a, b) * (widthMm / 2);
+        if (n.Length < 1e-9) return "";
+        var corners = new[] { a + n, b + n, b - n, a - n };
+        return string.Join(' ', corners.Select(c => string.Create(CultureInfo.InvariantCulture, $"{Px(c):0.##},{Py(c):0.##}")));
+    }
+
+    /// <summary>SVG arc between two absolute angles (degrees, maths convention) around a centre.</summary>
+    private string Arc(Pt centre, double radiusMm, double fromDeg, double toDeg)
+    {
+        var a = centre + Pt.FromAngle(fromDeg, radiusMm);
+        var b = centre + Pt.FromAngle(toDeg, radiusMm);
+        var r = S(radiusMm);
+        // Y is flipped on screen, so a mathematically anticlockwise sweep draws clockwise
+        var sweep = toDeg > fromDeg ? 0 : 1;
+        return string.Create(CultureInfo.InvariantCulture,
+            $"M {Px(a):0.##} {Py(a):0.##} A {r:0.##} {r:0.##} 0 0 {sweep} {Px(b):0.##} {Py(b):0.##}");
+    }
+
+    // "0.#" not "0": a headset stack of 8.5 must not render as 9 on a drawing that claims millimetres
+    private static string F(double v) => v.ToString("0.#", CultureInfo.InvariantCulture);
+    private static string Len(double v) => v.ToString("0.#", CultureInfo.InvariantCulture);
+    private static string Sign(double v) => (v >= 0 ? "+" : "−") + Math.Abs(v).ToString("0.#", CultureInfo.InvariantCulture);
+}

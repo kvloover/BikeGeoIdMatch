@@ -1,0 +1,36 @@
+@* Download the user's own data as a file, or upload one made earlier (or on another machine). *@
+<div class="data-transfer">
+    <a href="@DownloadUrl" download="@FileName">Export @Label</a>
+    <label class="upload">Upload
+        <InputFile OnChange="Upload" accept=".json,application/json" />
+    </label>
+    @if (message.Length > 0)
+    {
+        <p class="hint message">@message</p>
+    }
+</div>
+
+@code {
+    private const long MaxBytes = 2 * 1024 * 1024;
+
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter, EditorRequired] public string DownloadUrl { get; set; } = "";
+    [Parameter, EditorRequired] public string FileName { get; set; } = "";
+    /// <summary>Takes the uploaded JSON, merges it in and reports what happened.</summary>
+    [Parameter, EditorRequired] public Func<string, Services.ImportSummary> Import { get; set; } = null!;
+
+    private string message = "";
+
+    private async Task Upload(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            using var reader = new StreamReader(e.File.OpenReadStream(MaxBytes));
+            message = Import(await reader.ReadToEndAsync()).ToString();
+        }
+        catch (Exception ex) when (ex is System.Text.Json.JsonException or IOException)
+        {
+            message = ex is IOException ? "That file is too large." : "That is not a valid export file.";
+        }
+    }
+}

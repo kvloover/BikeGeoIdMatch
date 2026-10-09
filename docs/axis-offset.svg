@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 640" width="1000" height="640" font-family="Segoe UI, system-ui, sans-serif">
+<defs>
+<marker id="a" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#5a6472"/></marker>
+<marker id="as" markerWidth="9" markerHeight="9" refX="1" refY="4.5" orient="auto"><path d="M9,0 L0,4.5 L9,9 z" fill="#5a6472"/></marker>
+<marker id="b" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#0f6fd6"/></marker>
+<marker id="bs" markerWidth="9" markerHeight="9" refX="1" refY="4.5" orient="auto"><path d="M9,0 L0,4.5 L9,9 z" fill="#0f6fd6"/></marker>
+</defs>
+<rect width="1000" height="640" fill="#ffffff"/>
+<polygon points="444.7 616 415.2 516.2 524.8 483.8 554.4 583.5" fill="#ccd2d9" stroke="#2b3138" stroke-width="1.2"/>
+<polygon points="412.7 517 406.4 495.8 521.1 461.8 527.3 483" fill="#9aa3ae" stroke="#2b3138" stroke-width="1.2"/>
+<polygon points="410.1 494.7 406.4 482.2 513.6 450.5 517.3 462.9" fill="#b7bfc8" stroke="#2b3138" stroke-width="1"/>
+<polygon points="406.4 482.2 402.7 469.8 509.9 438 513.6 450.5" fill="#b7bfc8" stroke="#2b3138" stroke-width="1"/>
+<polygon points="402.7 469.8 399 457.3 506.2 425.5 509.9 438" fill="#b7bfc8" stroke="#2b3138" stroke-width="1"/>
+<polygon points="399 457.3 395.4 444.8 502.6 413.1 506.2 425.5" fill="#b7bfc8" stroke="#2b3138" stroke-width="1"/>
+<polygon points="395.4 444.8 391.7 432.4 498.9 400.6 502.6 413.1" fill="#b7bfc8" stroke="#2b3138" stroke-width="1"/>
+<polygon points="382.9 434.9 353.4 335.2 478 298.3 507.6 398" fill="#cfe3f8" stroke="#0f6fd6" stroke-width="1.5"/>
+<polygon points="434.4 510.6 380.1 327.3 451.4 306.2 505.6 489.4" fill="none" stroke="#2b3138" stroke-width="1" stroke-dasharray="5 4"/>
+<polygon points="421.9 323.3 657.1 279.7 671.3 356.4 436.1 400" fill="#cfe3f8" stroke="#0f6fd6" stroke-width="1.5"/>
+<line x1="429" y1="361.6" x2="715.3" y2="308.6" stroke="#0f6fd6" stroke-width="1.7" stroke-dasharray="9 5"/>
+<circle cx="664.2" cy="318.1" r="41.3" fill="#d1462f" opacity="0.8"/>
+<circle cx="429" cy="361.6" r="4" fill="#0f6fd6"/>
+<line x1="529.8" y1="482.3" x2="300.5" y2="550.2" stroke="#8b95a2" stroke-width="0.9" stroke-dasharray="4 3"/>
+<line x1="523.6" y1="461.1" x2="294.2" y2="529" stroke="#8b95a2" stroke-width="0.9" stroke-dasharray="4 3"/>
+<line x1="505.1" y1="398.8" x2="275.7" y2="466.7" stroke="#8b95a2" stroke-width="0.9" stroke-dasharray="4 3"/>
+<line x1="475.6" y1="299" x2="246.2" y2="367" stroke="#8b95a2" stroke-width="0.9" stroke-dasharray="4 3"/>
+<line x1="429" y1="361.6" x2="259.5" y2="411.9" stroke="#0f6fd6" stroke-width="0.9" stroke-dasharray="4 3"/>
+<line x1="320.4" y1="544.3" x2="314.1" y2="523.1" stroke="#5a6472" stroke-width="1.3" marker-start="url(#as)" marker-end="url(#a)"/>
+<line x1="314.1" y1="523.1" x2="295.7" y2="460.8" stroke="#5a6472" stroke-width="1.3" marker-start="url(#as)" marker-end="url(#a)"/>
+<line x1="295.7" y1="460.8" x2="279.4" y2="405.9" stroke="#0f6fd6" stroke-width="1.3" marker-start="url(#bs)" marker-end="url(#b)"/>
+<text x="302.3" y="538.1" text-anchor="end" font-size="14" font-weight="400" fill="#5a6472">headset stack 8.5</text>
+<text x="290" y="496.4" text-anchor="end" font-size="14" font-weight="400" fill="#5a6472">spacers 5 &#215; 5 = 25</text>
+<text x="272.6" y="437.8" text-anchor="end" font-size="16" font-weight="700" fill="#0f6fd6">axis offset 22</text>
+<line x1="186" y1="493.3" x2="156.5" y2="393.6" stroke="#5a6472" stroke-width="1.3" marker-start="url(#as)" marker-end="url(#a)"/>
+<text x="156.3" y="447.9" text-anchor="end" font-size="14" font-weight="400" fill="#5a6472">stem clamp height 40</text>
+<line x1="545" y1="386.9" x2="633.4" y2="412.9" stroke="#5a6472" stroke-width="0.9"/>
+<text x="643.8" y="420.7" font-size="13" fill="#5a6472">bottom face of the stem</text>
+<text x="679.8" y="250.5" font-size="13" fill="#0f6fd6">bar centre</text>
+<text x="507" y="257.6" font-size="13" fill="#0f6fd6">extension centreline</text>
+<text x="638.8" y="491.2" font-size="13" fill="#5a6472">top of the head tube</text>
+<text x="26" y="36" font-size="19" font-weight="700" fill="#16191d">Where the 22 mm extension axis offset sits</text>
+<text x="26" y="58" font-size="14" fill="#5a6472">Roval Rapide on a Tarmac SL8 &#183; drawn to scale, 2.6 px per mm &#183; steerer at 73.5&#176;</text>
+<text x="26" y="576" font-size="14" fill="#16191d">Measured <tspan font-weight="700">along the steerer</tspan>, from the bottom face of the stem up to the centreline of the extension.</text>
+<text x="26" y="598" font-size="14" fill="#16191d">It is 22 of the stem&#8217;s 40 mm clamp height, so the extension sits just above the middle of the clamp.</text>
+<text x="26" y="622" font-size="13" fill="#b3261e">Inferred from the fit sheet, not measured. It adds to the headset stack, so 1 mm here = 1 mm of spacers.</text>
+</svg>

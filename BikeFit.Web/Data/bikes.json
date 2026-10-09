@@ -1,0 +1,44 @@
+[
+  {
+    "id": "arch-race",
+    "brand": "Archetype",
+    "model": "Race road (sample data)",
+    "source": "library",
+    "sizes": [
+      { "name": "49", "stack": 510, "reach": 375, "headTubeAngle": 71.5, "seatTubeAngle": 74.5, "topTubeEffective": 520, "headTubeLength": 100, "seatTubeLength": 470, "chainstayLength": 410, "wheelbase": 977, "bbDrop": 69, "forkRake": 47, "trail": 60, "standoverHeight": 710, "wheelDiameter": 682 },
+      { "name": "52", "stack": 530, "reach": 383, "headTubeAngle": 72.5, "seatTubeAngle": 74.0, "topTubeEffective": 537, "headTubeLength": 115, "seatTubeLength": 490, "chainstayLength": 410, "wheelbase": 981, "bbDrop": 69, "forkRake": 47, "trail": 58, "standoverHeight": 733, "wheelDiameter": 682 },
+      { "name": "54", "stack": 553, "reach": 388, "headTubeAngle": 73.0, "seatTubeAngle": 73.5, "topTubeEffective": 550, "headTubeLength": 138, "seatTubeLength": 510, "chainstayLength": 410, "wheelbase": 987, "bbDrop": 69, "forkRake": 45, "trail": 58, "standoverHeight": 752, "wheelDiameter": 682 },
+      { "name": "56", "stack": 573, "reach": 395, "headTubeAngle": 73.5, "seatTubeAngle": 73.5, "topTubeEffective": 565, "headTubeLength": 158, "seatTubeLength": 530, "chainstayLength": 410, "wheelbase": 995, "bbDrop": 69, "forkRake": 45, "trail": 57, "standoverHeight": 772, "wheelDiameter": 682 },
+      { "name": "58", "stack": 595, "reach": 400, "headTubeAngle": 73.5, "seatTubeAngle": 73.0, "topTubeEffective": 580, "headTubeLength": 180, "seatTubeLength": 550, "chainstayLength": 412, "wheelbase": 1005, "bbDrop": 69, "forkRake": 45, "trail": 57, "standoverHeight": 792, "wheelDiameter": 682 },
+      { "name": "61", "stack": 625, "reach": 405, "headTubeAngle": 73.5, "seatTubeAngle": 72.5, "topTubeEffective": 596, "headTubeLength": 210, "seatTubeLength": 580, "chainstayLength": 415, "wheelbase": 1022, "bbDrop": 69, "forkRake": 45, "trail": 57, "standoverHeight": 815, "wheelDiameter": 682 }
+    ]
+  },
+  {
+    "id": "arch-endurance",
+    "brand": "Archetype",
+    "model": "Endurance road (sample data)",
+    "source": "library",
+    "sizes": [
+      { "name": "48", "stack": 535, "reach": 370, "headTubeAngle": 71.0, "seatTubeAngle": 74.5, "topTubeEffective": 517, "headTubeLength": 125, "seatTubeLength": 450, "chainstayLength": 415, "wheelbase": 990, "bbDrop": 74, "forkRake": 50, "trail": 62, "standoverHeight": 700, "wheelDiameter": 686 },
+      { "name": "51", "stack": 559, "reach": 377, "headTubeAngle": 71.5, "seatTubeAngle": 74.0, "topTubeEffective": 533, "headTubeLength": 145, "seatTubeLength": 470, "chainstayLength": 415, "wheelbase": 998, "bbDrop": 74, "forkRake": 50, "trail": 61, "standoverHeight": 722, "wheelDiameter": 686 },
+      { "name": "54", "stack": 587, "reach": 383, "headTubeAngle": 72.0, "seatTubeAngle": 73.5, "topTubeEffective": 548, "headTubeLength": 170, "seatTubeLength": 495, "chainstayLength": 415, "wheelbase": 1006, "bbDrop": 74, "forkRake": 47, "trail": 61, "standoverHeight": 745, "wheelDiameter": 686 },
+      { "name": "56", "stack": 610, "reach": 388, "headTubeAngle": 72.5, "seatTubeAngle": 73.5, "topTubeEffective": 563, "headTubeLength": 192, "seatTubeLength": 515, "chainstayLength": 415, "wheelbase": 1014, "bbDrop": 74, "forkRake": 47, "trail": 60, "standoverHeight": 765, "wheelDiameter": 686 },
+      { "name": "58", "stack": 634, "reach": 393, "headTubeAngle": 73.0, "seatTubeAngle": 73.0, "topTubeEffective": 578, "headTubeLength": 215, "seatTubeLength": 540, "chainstayLength": 417, "wheelbase": 1025, "bbDrop": 74, "forkRake": 47, "trail": 59, "standoverHeight": 787, "wheelDiameter": 686 },
+      { "name": "61", "stack": 662, "reach": 398, "headTubeAngle": 73.0, "seatTubeAngle": 72.5, "topTubeEffective": 595, "headTubeLength": 245, "seatTubeLength": 570, "chainstayLength": 420, "wheelbase": 1042, "bbDrop": 74, "forkRake": 47, "trail": 59, "standoverHeight": 812, "wheelDiameter": 686 }
+    ]
+  },
+  {
+    "id": "arch-gravel",
+    "brand": "Archetype",
+    "model": "Gravel (sample data)",
+    "source": "library",
+    "sizes": [
+      { "name": "49", "stack": 543, "reach": 371, "headTubeAngle": 70.5, "seatTubeAngle": 74.5, "topTubeEffective": 522, "headTubeLength": 110, "seatTubeLength": 440, "chainstayLength": 425, "wheelbase": 1015, "bbDrop": 75, "forkRake": 52, "trail": 68, "standoverHeight": 715, "wheelDiameter": 712 },
+      { "name": "52", "stack": 565, "reach": 378, "headTubeAngle": 71.0, "seatTubeAngle": 74.0, "topTubeEffective": 538, "headTubeLength": 130, "seatTubeLength": 465, "chainstayLength": 425, "wheelbase": 1022, "bbDrop": 75, "forkRake": 52, "trail": 67, "standoverHeight": 735, "wheelDiameter": 712 },
+      { "name": "54", "stack": 590, "reach": 384, "headTubeAngle": 71.5, "seatTubeAngle": 73.5, "topTubeEffective": 553, "headTubeLength": 155, "seatTubeLength": 490, "chainstayLength": 425, "wheelbase": 1030, "bbDrop": 75, "forkRake": 50, "trail": 67, "standoverHeight": 757, "wheelDiameter": 712 },
+      { "name": "56", "stack": 615, "reach": 390, "headTubeAngle": 72.0, "seatTubeAngle": 73.5, "topTubeEffective": 568, "headTubeLength": 180, "seatTubeLength": 515, "chainstayLength": 425, "wheelbase": 1039, "bbDrop": 75, "forkRake": 50, "trail": 66, "standoverHeight": 778, "wheelDiameter": 712 },
+      { "name": "58", "stack": 640, "reach": 395, "headTubeAngle": 72.0, "seatTubeAngle": 73.0, "topTubeEffective": 583, "headTubeLength": 205, "seatTubeLength": 545, "chainstayLength": 428, "wheelbase": 1050, "bbDrop": 75, "forkRake": 50, "trail": 66, "standoverHeight": 800, "wheelDiameter": 712 },
+      { "name": "61", "stack": 670, "reach": 400, "headTubeAngle": 72.0, "seatTubeAngle": 72.5, "topTubeEffective": 600, "headTubeLength": 235, "seatTubeLength": 575, "chainstayLength": 430, "wheelbase": 1068, "bbDrop": 75, "forkRake": 50, "trail": 66, "standoverHeight": 825, "wheelDiameter": 712 }
+    ]
+  }
+]

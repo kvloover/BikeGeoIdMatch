@@ -1,0 +1,182 @@
+@using BikeFit.Web.Models
+@using BikeFit.Web.Services
+@using System.Globalization
+
+<svg class="diagram" viewBox="@($"0 0 {W} {H}")" xmlns="http://www.w3.org/2000/svg" role="img"
+     aria-label="Detail drawing of the saddle position, seatpost and rail clamp">
+    <defs>
+        <marker id="s-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill="var(--dim)" />
+        </marker>
+        <marker id="s-arrow-start" markerWidth="8" markerHeight="8" refX="1" refY="4" orient="auto">
+            <path d="M8,0 L0,4 L8,8 z" fill="var(--dim)" />
+        </marker>
+    </defs>
+
+    <rect x="0" y="0" width="@W" height="@H" class="canvas" />
+
+    @* ---- seat tube axis, extended past the frame so the reference is visible ---- *@
+    <line x1="@Px(c.Bb)" y1="@Py(c.Bb)" x2="@Px(AxisTop)" y2="@Py(AxisTop)" class="ref-line" />
+    <polygon points="@Rect(c.Bb, c.SeatTubeTop, 34)" class="part head-tube-part" />
+
+    @* ---- seatpost ---- *@
+    <polygon points="@Rect(c.SeatTubeTop, PostTop, 27)" class="part steerer" />
+    @if (Math.Abs(Saddle.PostOffset) > 0.01)
+    {
+        @* No text on this one: the space around the cradle is already busy, and the subtitle
+           states the setback. The line alone shows which way the post throws the saddle. *@
+        <line x1="@Px(c.PostAxisAtCradle)" y1="@Py(c.PostAxisAtCradle)" x2="@Px(c.Cradle)" y2="@Py(c.Cradle)"
+              class="dim" marker-start="url(#s-arrow-start)" marker-end="url(#s-arrow)" />
+    }
+
+    @* ---- rail cradle ---- *@
+    <polygon points="@Rect(c.Cradle + new Pt(-16, 0), c.Cradle + new Pt(16, 0), 13)" class="part stem-part" />
+    <circle cx="@Px(c.Cradle)" cy="@Py(c.Cradle)" r="3" class="bb" />
+
+    @* ---- rails ---- *@
+    <line x1="@Px(RailBack)" y1="@Py(RailBack)" x2="@Px(RailFront)" y2="@Py(RailFront)" class="rail" />
+    <line x1="@Px(RailBack + new Pt(0, 9))" y1="@Py(RailBack + new Pt(0, 9))"
+          x2="@Px(RailFront + new Pt(0, 9))" y2="@Py(RailFront + new Pt(0, 9))" class="rail" />
+
+    @* The rail travel limits and the reachable setback band live in their own drawing - at this
+       scale they would be a few pixels wide and unreadable. *@
+
+    @* ---- saddle ---- *@
+    <path d="@SaddlePath()" class="saddle-body" />
+
+    @* ---- the number that matters: BRP relative to the cradle. Sits in the gap between the
+           saddle shell and the rails, clear of the setback and BRP labels above. ---- *@
+    <line x1="@Px(c.Cradle)" y1="@Py(c.Cradle)" x2="@Px(c.Cradle)" y2="@Py(GapLevel)" class="dim faint" />
+    <line x1="@Px(c.Brp)" y1="@Py(c.Brp)" x2="@Px(c.Brp)" y2="@Py(GapLevel)" class="dim faint" />
+    <line x1="@Px(c.Cradle)" y1="@Py(GapLevel)" x2="@Px(c.Brp)" y2="@Py(GapLevel)"
+          class="dim strong-dim" marker-start="url(#s-arrow-start)" marker-end="url(#s-arrow)" />
+    <text x="@Px(Mid(c.Cradle, c.Brp))" y="@(Py(GapLevel) + 15)" class="dim-label strong-label" text-anchor="middle">
+        @F(Math.Abs(c.ForwardOfCradle)) mm @(c.ForwardOfCradle >= 0 ? "forward of" : "behind") cradle
+    </text>
+
+    @* ---- rail drop ---- *@
+    <line x1="@(Px(c.Brp) + 54)" y1="@Py(c.Brp)" x2="@(Px(c.Brp) + 54)" y2="@Py(c.Cradle)"
+          class="dim" marker-start="url(#s-arrow-start)" marker-end="url(#s-arrow)" />
+    <text x="@(Px(c.Brp) + 60)" y="@Py(Mid(c.Brp, c.Cradle))" class="dim-label">rail drop @F(Saddle.RailDrop)</text>
+
+    @* ---- setback and height from the BB ---- *@
+    <line x1="@Px(c.Bb)" y1="@Py(c.Bb)" x2="@Px(c.Bb)" y2="@(Py(c.Brp) - 26)" class="ref-line" />
+    <line x1="@Px(c.Bb)" y1="@(Py(c.Brp) - 26)" x2="@Px(c.Brp)" y2="@(Py(c.Brp) - 26)"
+          class="dim" marker-start="url(#s-arrow-start)" marker-end="url(#s-arrow)" />
+    <text x="@Px(Mid(c.Bb, c.Brp))" y="@(Py(c.Brp) - 32)" class="dim-label" text-anchor="middle">
+        setback @F(c.Setback)
+    </text>
+    <line x1="@Px(c.Bb)" y1="@Py(c.Bb)" x2="@Px(c.Brp)" y2="@Py(c.Brp)" class="dim direct" />
+    <text x="@(Px(Mid(c.Bb, c.Brp)) + 10)" y="@(Py(Mid(c.Bb, c.Brp)) + 4)" class="dim-label">
+        saddle height @F(c.SaddleHeight)
+    </text>
+
+    @* ---- angles ---- *@
+    <path d="@Arc(c.Bb, 120, 90, c.VirtualSeatAngle)" class="arc arc-2" />
+    <path d="@Arc(c.Bb, 155, 90, Size.SeatTubeAngle)" class="arc" />
+    <text x="@Px(c.Bb + Pt.FromAngle((90 + c.VirtualSeatAngle) / 2, 128))"
+          y="@Py(c.Bb + Pt.FromAngle((90 + c.VirtualSeatAngle) / 2, 128))" class="angle-label angle-label-2">
+        @c.VirtualSeatAngle.ToString("0.0")&#176; virtual
+    </text>
+    <text x="@Px(c.Bb + Pt.FromAngle((90 + Size.SeatTubeAngle) / 2, 168))"
+          y="@Py(c.Bb + Pt.FromAngle((90 + Size.SeatTubeAngle) / 2, 168))" class="angle-label">
+        @Size.SeatTubeAngle.ToString("0.0")&#176; frame
+    </text>
+
+    @* ---- BRP marker ---- *@
+    <circle cx="@Px(c.Brp)" cy="@Py(c.Brp)" r="5" class="target-dot" />
+    <line x1="@(Px(c.Brp) - 11)" y1="@Py(c.Brp)" x2="@(Px(c.Brp) + 11)" y2="@Py(c.Brp)" class="cross" />
+    <line x1="@Px(c.Brp)" y1="@(Py(c.Brp) - 11)" x2="@Px(c.Brp)" y2="@(Py(c.Brp) + 11)" class="cross" />
+    <text x="@(Px(c.Brp) - 16)" y="@(Py(c.Brp) - 12)" class="pt-label" text-anchor="end">BRP (saddle 70 mm wide)</text>
+
+    <circle cx="@Px(c.Bb)" cy="@Py(c.Bb)" r="4" class="bb" />
+    <text x="@(Px(c.Bb) + 10)" y="@(Py(c.Bb) + 16)" class="dim-label">BB</text>
+
+    <text x="12" y="22" class="title">Saddle detail &#183; size @Size.Name</text>
+    <text x="12" y="40" class="subtitle">
+        @Size.SeatTubeAngle.ToString("0.0")&#176; seat tube vs @c.VirtualSeatAngle.ToString("0.0")&#176; needed
+        &#183; @(Saddle.PostOffset > 0.01 ? $"{F(Saddle.PostOffset)} mm setback post" : "inline post")
+    </text>
+    <text x="12" y="@(H - 12)" class="scale-note">
+        rail drop @F(Saddle.RailDrop) mm to the rail centreline &#183; rail travel shown separately
+    </text>
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public SizeGeometry Size { get; set; } = default!;
+    [Parameter, EditorRequired] public FitTarget Target { get; set; } = default!;
+    [Parameter, EditorRequired] public SaddleSpec Saddle { get; set; } = default!;
+    [Parameter] public double W { get; set; } = 940;
+    [Parameter] public double H { get; set; } = 470;
+
+    private SaddleMath.Chain c = default!;
+    private Projector Proj = default!;
+    private Pt AxisTop, PostTop, RailFront, RailBack, GapLevel, Nose, Tail;
+
+    protected override void OnParametersSet()
+    {
+        c = SaddleMath.Build(Size, Target, Saddle);
+
+        var s = CockpitMath.Rad(Size.SeatTubeAngle);
+        var axisUp = new Pt(-Math.Cos(s), Math.Sin(s));
+        AxisTop = axisUp * (c.Brp.Length + 40);
+        PostTop = c.PostAxisAtCradle;
+
+        // the rails run under the saddle, level with the cradle
+        RailFront = new Pt(c.Brp.X + Saddle.BrpFromNose * 0.55, c.Cradle.Y);
+        RailBack = new Pt(c.Brp.X - (Saddle.Length - Saddle.BrpFromNose) * 0.62, c.Cradle.Y);
+        // roughly halfway between the underside of the shell and the rails
+        GapLevel = new Pt(0, c.Cradle.Y + Saddle.RailDrop * 0.45);
+        Nose = new Pt(c.Brp.X + Saddle.BrpFromNose, c.Brp.Y);
+        Tail = new Pt(c.Brp.X - (Saddle.Length - Saddle.BrpFromNose), c.Brp.Y);
+
+        var pts = new List<Pt>
+        {
+            c.Bb, c.Brp, c.SeatTubeTop, c.Cradle, c.PostAxisAtCradle, AxisTop,
+            Nose, Tail, RailFront, RailBack, GapLevel,
+            new(c.Brp.X, c.Brp.Y + 46), new(c.Cradle.X - Saddle.RailRange - 20, c.Cradle.Y - 30),
+            new(0, 0), new(c.Brp.X - 30, c.Brp.Y)
+        };
+        Proj = new Projector(pts, W, H, marginMm: 26, marginPx: 66);
+    }
+
+    private static Pt Mid(Pt a, Pt b) => new((a.X + b.X) / 2, (a.Y + b.Y) / 2);
+    private double Px(Pt p) => Math.Round(Proj.X(p), 2);
+    private double Py(Pt p) => Math.Round(Proj.Y(p), 2);
+    private static string F(double v) => v.ToString("0.#", CultureInfo.InvariantCulture);
+
+    /// <summary>A short-nose saddle in side view, drawn around the BRP.</summary>
+    private string SaddlePath()
+    {
+        var f = Saddle.BrpFromNose;
+        var r = Saddle.Length - f;
+        Pt At(double dx, double dy) => new(c.Brp.X + dx, c.Brp.Y + dy);
+        string S(Pt q) => string.Create(CultureInfo.InvariantCulture, $"{Px(q):0.##} {Py(q):0.##}");
+
+        // top surface: nose slightly raised, flat through the BRP, tail kicked up
+        return $"M {S(At(f, 6))} C {S(At(f * 0.45, -2))} {S(At(f * 0.2, -1))} {S(At(0, 0))} " +
+               $"C {S(At(-r * 0.45, 1))} {S(At(-r * 0.82, -4))} {S(At(-r, 22))} " +
+               $"L {S(At(-r * 0.94, 30))} C {S(At(-r * 0.5, 12))} {S(At(f * 0.4, 12))} {S(At(f, 13))} Z";
+    }
+
+    /// <summary>Polygon for a rectangle whose centreline runs a -> b.</summary>
+    private string Rect(Pt a, Pt b, double widthMm)
+    {
+        var dir = b - a;
+        var len = dir.Length;
+        if (len < 1e-6) return "";
+        var n = new Pt(-dir.Y / len, dir.X / len) * (widthMm / 2);
+        return string.Join(' ', new[] { a + n, b + n, b - n, a - n }
+            .Select(q => string.Create(CultureInfo.InvariantCulture, $"{Px(q):0.##},{Py(q):0.##}")));
+    }
+
+    private string Arc(Pt centre, double radiusMm, double fromDeg, double toDeg)
+    {
+        var a = centre + Pt.FromAngle(fromDeg, radiusMm);
+        var b = centre + Pt.FromAngle(toDeg, radiusMm);
+        var rr = Math.Round(Proj.L(radiusMm), 2);
+        var sweep = toDeg > fromDeg ? 0 : 1;
+        return string.Create(CultureInfo.InvariantCulture,
+            $"M {Px(a):0.##} {Py(a):0.##} A {rr:0.##} {rr:0.##} 0 0 {sweep} {Px(b):0.##} {Py(b):0.##}");
+    }
+}

@@ -1,0 +1,91 @@
+@using BikeFit.Web.Models
+@using BikeFit.Web.Services
+@using System.Globalization
+
+@*
+    Just the rail, the clamp and the limits. Horizontal is to scale; vertical is schematic, because
+    the interesting span is only a few centimetres and drawing it to scale both ways would leave the
+    rail a hairline. The clamp is held fixed and the saddle slides over it, matching the way the
+    saddle diagram shows the BRP moving relative to the cradle.
+*@
+
+<svg class="diagram" viewBox="@($"0 0 {W} {H}")" xmlns="http://www.w3.org/2000/svg" role="img"
+     aria-label="Rail travel detail: clamp, limit marks and the position the fit requires">
+    <defs>
+        <marker id="r-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill="var(--dim)" />
+        </marker>
+        <marker id="r-arrow-start" markerWidth="8" markerHeight="8" refX="1" refY="4" orient="auto">
+            <path d="M8,0 L0,4 L8,8 z" fill="var(--dim)" />
+        </marker>
+    </defs>
+
+    <rect x="0" y="0" width="@W" height="@H" class="canvas" />
+
+    @* ---- the rail ---- *@
+    <rect x="@Sx(-Span)" y="121" width="@(Sx(Span) - Sx(-Span))" height="14" rx="7" class="rail-bar" />
+
+    @* ---- clamp ---- *@
+    <rect x="@Sx(-18)" y="104" width="@(Sx(18) - Sx(-18))" height="48" rx="4" class="clamp-block" />
+    <line x1="@Sx(0)" y1="96" x2="@Sx(0)" y2="160" class="axis-line" />
+    <text x="@Sx(0)" y="@(H - 58)" class="dim-label" text-anchor="middle">clamp</text>
+
+    @* ---- limit marks ---- *@
+    <line x1="@Sx(-Saddle.RailRange)" y1="92" x2="@Sx(-Saddle.RailRange)" y2="164" class="limit" />
+    <line x1="@Sx(Saddle.RailRange)" y1="92" x2="@Sx(Saddle.RailRange)" y2="164" class="limit" />
+
+    @* ---- travel band, labelled in the setback it delivers ---- *@
+    <line x1="@Sx(-Saddle.RailRange)" y1="176" x2="@Sx(Saddle.RailRange)" y2="176"
+          class="band" marker-start="url(#r-arrow-start)" marker-end="url(#r-arrow)" />
+    <text x="@Sx(-Saddle.RailRange)" y="196" class="dim-label" text-anchor="middle">@F(c.MaxSetback) mm setback</text>
+    <text x="@Sx(Saddle.RailRange)" y="196" class="dim-label" text-anchor="middle">@F(c.MinSetback) mm setback</text>
+
+    @* ---- where the fit needs the BRP to sit ---- *@
+    <line x1="@Sx(c.ForwardOfCradle)" y1="84" x2="@Sx(c.ForwardOfCradle)" y2="168"
+          class="@(c.WithinRailRange ? "band-target" : "band-target off")" />
+    <text x="@Sx(c.ForwardOfCradle)" y="76" class="@(c.WithinRailRange ? "pt-label" : "pt-label off")" text-anchor="middle">
+        BRP needs @F(Math.Abs(c.ForwardOfCradle)) mm @(c.ForwardOfCradle >= 0 ? "forward" : "back")
+    </text>
+
+    @* ---- direction ---- *@
+    <line x1="@(W - 150)" y1="@(H - 30)" x2="@(W - 90)" y2="@(H - 30)" class="dim" marker-end="url(#r-arrow)" />
+    <text x="@(W - 156)" y="@(H - 26)" class="dim-label" text-anchor="end">front of the bike</text>
+
+    <text x="12" y="22" class="title">Rail travel &#183; @F(Saddle.RailRange * 2) mm of adjustment</text>
+    <text x="12" y="40" class="subtitle">
+        horizontal to scale (@Scale.ToString("0.0") px per mm) &#183; vertical schematic
+    </text>
+    <text x="12" y="@(H - 12)" class="@(c.WithinRailRange ? "verdict-ok" : "verdict-bad")">
+        @if (c.WithinRailRange)
+        {
+            @($"Reachable: {c.Setback:0} mm setback sits inside the {c.MinSetback:0}–{c.MaxSetback:0} mm this post delivers, with {Saddle.RailRange - Math.Abs(c.ForwardOfCradle):0.0} mm of rail to spare.")
+        }
+        else
+        {
+            @($"Out of range: {c.Setback:0} mm setback is outside the {c.MinSetback:0}–{c.MaxSetback:0} mm this post delivers — short by {Math.Abs(c.ForwardOfCradle) - Saddle.RailRange:0.0} mm of rail.")
+        }
+    </text>
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public SizeGeometry Size { get; set; } = default!;
+    [Parameter, EditorRequired] public FitTarget Target { get; set; } = default!;
+    [Parameter, EditorRequired] public SaddleSpec Saddle { get; set; } = default!;
+    [Parameter] public double W { get; set; } = 940;
+    [Parameter] public double H { get; set; } = 250;
+
+    private SaddleMath.Chain c = default!;
+    private double Span, Scale;
+
+    protected override void OnParametersSet()
+    {
+        c = SaddleMath.Build(Size, Target, Saddle);
+
+        // wide enough for the limits and for a target that falls outside them
+        Span = Math.Max(Saddle.RailRange, Math.Abs(c.ForwardOfCradle)) + 22;
+        Scale = (W - 150) / (2 * Span);
+    }
+
+    private double Sx(double mm) => Math.Round(W / 2 + mm * Scale, 2);
+    private static string F(double v) => v.ToString("0.#", CultureInfo.InvariantCulture);
+}

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1020 640" width="1020" height="640" font-family="Segoe UI, system-ui, sans-serif">
+<defs>
+<marker id="a" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#b3261e"/></marker>
+<marker id="as" markerWidth="9" markerHeight="9" refX="1" refY="4.5" orient="auto"><path d="M9,0 L0,4.5 L9,9 z" fill="#b3261e"/></marker>
+<marker id="g" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#5a6472"/></marker>
+<marker id="gs" markerWidth="9" markerHeight="9" refX="1" refY="4.5" orient="auto"><path d="M9,0 L0,4.5 L9,9 z" fill="#5a6472"/></marker>
+</defs>
+<rect width="1020" height="640" fill="#ffffff"/>
+<polygon points="335.9 621.1 296.7 488.7 423.3 451.3 462.5 583.6" fill="#ccd2d9" stroke="#2b3138" stroke-width="1.2"/>
+<polygon points="293.8 489.6 286.6 465.1 418.9 426 426.2 450.4" fill="#9aa3ae" stroke="#2b3138" stroke-width="1.2"/>
+<polygon points="290.9 463.9 286.7 449.5 410.3 412.8 414.6 427.2" fill="#b7bfc8" stroke="#2b3138" stroke-width="1"/>
+<polygon points="286.7 449.5 282.4 435.1 406.1 398.5 410.3 412.8" fill="#b7bfc8" stroke="#2b3138" stroke-width="1"/>
+<polygon points="282.4 435.1 278.1 420.7 401.8 384.1 406.1 398.5" fill="#b7bfc8" stroke="#2b3138" stroke-width="1"/>
+<polygon points="278.1 420.7 273.9 406.3 397.6 369.7 401.8 384.1" fill="#b7bfc8" stroke="#2b3138" stroke-width="1"/>
+<polygon points="273.9 406.3 269.6 392 393.3 355.3 397.6 369.7" fill="#b7bfc8" stroke="#2b3138" stroke-width="1"/>
+<path d="M 259.5 394.9 L 242.7 274.8 C 260.7 215.2 430.7 215.2 490.7 215.2 L 679.7 215.2 Q 706.7 248.6 673.7 310.6 C 466.7 310.6 493.4 328.6 403.4 352.3 Z" fill="#cfe3f8" stroke="#0f6fd6" stroke-width="1.5" stroke-linejoin="round"/>
+<path d="M 679.7 215.2 C 781.7 215.2 811.7 335.2 811.7 431.2" fill="none" stroke="#0f6fd6" stroke-width="3" opacity="0.5"/>
+<line x1="216.4" y1="407.7" x2="604.7" y2="292.7" stroke="#b3261e" stroke-width="1.4" stroke-dasharray="7 5"/>
+<text x="604.7" y="292.7" dy="34" font-size="13" fill="#b3261e" text-anchor="end">mounting face &#8212; what sits on the spacers</text>
+<line x1="592.7" y1="296.3" x2="568.7" y2="215.2" stroke="#b3261e" stroke-width="2" marker-start="url(#as)" marker-end="url(#a)"/>
+<circle cx="568.7" cy="215.2" r="4" fill="#b3261e"/>
+<text x="568.7" y="215.2" dy="-14" font-size="15" font-weight="700" fill="#b3261e" text-anchor="middle">A</text>
+<line x1="568.7" y1="215.2" x2="742.7" y2="167.2" stroke="#8b95a2" stroke-width="0.9"/>
+<text x="754.7" y="167.2" dy="4" font-size="13" fill="#5a6472">thin aero blade here &#8212;</text>
+<text x="754.7" y="167.2" dy="20" font-size="13" fill="#5a6472">its thickness is not what you need</text>
+<line x1="152.9" y1="531.3" x2="124.4" y2="435" stroke="#5a6472" stroke-width="1.6" marker-start="url(#gs)" marker-end="url(#g)"/>
+<line x1="291" y1="490.4" x2="129.9" y2="538.2" stroke="#8b95a2" stroke-width="0.8" stroke-dasharray="4 3"/>
+<line x1="262.4" y1="394.1" x2="101.3" y2="441.8" stroke="#8b95a2" stroke-width="0.8" stroke-dasharray="4 3"/>
+<text x="109.9" y="491.7" font-size="15" font-weight="700" fill="#5a6472" text-anchor="end">C</text>
+<text x="446.3" y="444.4" dy="20" dx="8" font-size="13" fill="#5a6472">top of the head tube</text>
+<text x="26" y="36" font-size="19" font-weight="700" fill="#16191d">Two measurements that pin down the cockpit</text>
+<text x="26" y="58" font-size="14" fill="#5a6472">Roval Rapide 90 mm on a Tarmac SL8 &#183; drawn to scale, 3 px per mm</text>
+<g font-size="14" fill="#16191d">
+<text x="26" y="512"><tspan font-weight="700" fill="#b3261e">A</tspan>  Sit the cockpit on a flat table, mounting face down. Measure the height from the table</text>
+<text x="48" y="532">to the top surface, on the centreline 90 mm forward of the steerer.  <tspan font-weight="700">Predicted 28.2 mm.</tspan></text>
+<text x="26" y="558"><tspan font-weight="700" fill="#5a6472">C</tspan>  On the built bike: head tube top to the mounting face, along the steerer.  <tspan font-weight="700">Predicted 33.5 mm.</tspan></text>
+</g>
+<text x="26" y="588" font-size="13" fill="#b3261e">Measured minus predicted is your spacer correction, near enough 1 mm for 1 mm.</text>
+<text x="26" y="612" font-size="13" fill="#5a6472">Don&#8217;t measure the section thickness: at the centre it is a thin blade, and the quoted &#8220;90 mm&#8221; is a conventional-stem equivalent measured</text>
+<text x="26" y="628" font-size="13" fill="#5a6472">to where a round bar&#8217;s centre would sit, roughly 16 mm below the top surface. A measures past all of that in one go.</text>
+</svg>

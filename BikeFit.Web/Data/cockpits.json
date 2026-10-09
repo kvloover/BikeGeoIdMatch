@@ -1,0 +1,123 @@
+[
+  {
+    "id": "roval-rapide",
+    "name": "Roval Rapide Cockpit (one-piece)",
+    "sourceUrl": "https://www.specialized.com/us/en/roval-rapide-cockpit/p/218323",
+    "notes": "Official Roval spec: 75 mm reach, 127 mm drop, -6 deg stem, 40 mm steerer clamp height, stem lengths 75-135 mm depending on bar width. Stock cockpit on the Tarmac SL8 / SL9. TWO NUMBERS HERE ARE NOT MEASURED. The 22 mm extension axis offset is inferred from an idmatch fit sheet for this cockpit on an SL8, and trades off roughly 1:1 against the frame's headset stack. The 31.8 mm bar section height is retail-spec boilerplate: this is a one-piece cockpit with no clamp and flattened aero tops, so the real section is shallower - which would mean MORE spacers, about 1 mm per mm. Measuring the bottom face of the cockpit to the top of the tops at the centre settles both at once. Axis offset re-derived under the level-tops model: the fit sheet needs about 47 mm from the top of the head tube to the line through the HB point, so with this frame's headset stack the offset lands high in the 40 mm clamp. Its split against the headset stack and the bar section height is NOT determined by the data - only their combined vertical effect is. FLARE VARIANTS: flare is a per-size-combination choice, not a fixed property of the cockpit - the configurator offers different options per stem/width pairing (90 x 380 shows 4 deg or 10 deg). Set the flare field to match the exact part number. At the 127 mm drop it spreads the drops about 11 mm at 4 deg, 28 mm at 10 deg. MODEL CORRECTION: the quoted stem length is measured ALONG the quoted body angle (centre to centre), not horizontally - which is how stems have always been measured. With that convention the HB point sits only about 5.5 mm above the notional centre, i.e. an ~11 mm section, matching the thin aero blade the part actually has at the centre. Implied stem lengths then come out 90.1 / 90.2 / 99.6 against stock 90 / 90 / 100. The earlier level-tops fit reached the same answer by measuring length horizontally and assuming a 31.8 mm section; it fitted equally well but implied a section thickness the part does not have.",
+    "stemAngle": -6,
+    "stemClampHeight": 40,
+    "barReach": 75,
+    "barDrop": 127,
+    "stemLengths": [
+      75,
+      80,
+      90,
+      100,
+      110,
+      120,
+      130,
+      135
+    ],
+    "integrated": true,
+    "dropFlare": 4.0,
+    "barWidths": [
+      380,
+      400,
+      420,
+      440
+    ],
+    "stemAxisOffset": 32.3,
+    "barTubeDiameter": 11.0,
+    "flatTops": false
+  },
+  {
+    "id": "roval-alpinist-ii",
+    "name": "Roval Alpinist Cockpit II (one-piece)",
+    "sourceUrl": "https://www.specialized.com/us/en/roval-rapide-cockpit/p/218323",
+    "notes": "Roval's published figures: 75 mm reach, 125 mm drop, 4 deg drop flare. Stem angle and clamp height are not published separately - the Rapide's -6 deg / 40 mm are used as a starting point, so check them on the part. Axis offset re-derived under the level-tops model: the fit sheet needs about 47 mm from the top of the head tube to the line through the HB point, so with this frame's headset stack the offset lands high in the 40 mm clamp. Its split against the headset stack and the bar section height is NOT determined by the data - only their combined vertical effect is. MODEL CORRECTION: the quoted stem length is measured ALONG the quoted body angle (centre to centre), not horizontally - which is how stems have always been measured. With that convention the HB point sits only about 5.5 mm above the notional centre, i.e. an ~11 mm section, matching the thin aero blade the part actually has at the centre. Implied stem lengths then come out 90.1 / 90.2 / 99.6 against stock 90 / 90 / 100. The earlier level-tops fit reached the same answer by measuring length horizontally and assuming a 31.8 mm section; it fitted equally well but implied a section thickness the part does not have.",
+    "stemAngle": -6,
+    "stemClampHeight": 40,
+    "barReach": 75,
+    "barDrop": 125,
+    "stemLengths": [
+      75,
+      80,
+      90,
+      100,
+      110,
+      120,
+      130
+    ],
+    "integrated": true,
+    "dropFlare": 4.0,
+    "barWidths": [
+      380,
+      400,
+      420,
+      440
+    ],
+    "stemAxisOffset": 27.5,
+    "barTubeDiameter": 11.0,
+    "flatTops": false
+  },
+  {
+    "id": "trek-aero-rsl",
+    "name": "Trek Aero RSL integrated bar/stem (Madone Gen 8)",
+    "sourceUrl": "https://www.trekbikes.com/us/en_US/equipment/cycling-components/bike-stems-accessories/integrated-handlebar/stems/trek-aero-rsl-road-integrated-handlebar/stem/p/48049/",
+    "notes": "Official Trek spec: 80 mm reach, 124 mm drop, 6 deg drop flare, stem lengths 70-130 mm. Trek does not publish a stem angle or clamp height for this part, so 0 deg and 40 mm are placeholders - measure them on the bike before trusting the spacer count. Axis offset re-derived under the level-tops model: the fit sheet needs about 47 mm from the top of the head tube to the line through the HB point, so with this frame's headset stack the offset lands high in the 40 mm clamp. Its split against the headset stack and the bar section height is NOT determined by the data - only their combined vertical effect is. MODEL CORRECTION: the quoted stem length is measured ALONG the quoted body angle (centre to centre), not horizontally - which is how stems have always been measured. With that convention the HB point sits only about 5.5 mm above the notional centre, i.e. an ~11 mm section, matching the thin aero blade the part actually has at the centre. Implied stem lengths then come out 90.1 / 90.2 / 99.6 against stock 90 / 90 / 100. The earlier level-tops fit reached the same answer by measuring length horizontally and assuming a 31.8 mm section; it fitted equally well but implied a section thickness the part does not have.",
+    "stemAngle": 0,
+    "stemClampHeight": 40,
+    "barReach": 80,
+    "barDrop": 124,
+    "stemLengths": [
+      70,
+      80,
+      90,
+      100,
+      110,
+      120,
+      130
+    ],
+    "integrated": true,
+    "dropFlare": 6.0,
+    "barWidths": [
+      360,
+      380,
+      400,
+      420,
+      440
+    ],
+    "stemAxisOffset": 16.2,
+    "barTubeDiameter": 11.0,
+    "flatTops": false
+  },
+  {
+    "id": "bontrager-aeolus-rsl-vrc",
+    "name": "Bontrager Aeolus RSL VR-C bar/stem",
+    "sourceUrl": "https://www.trekbikes.com/us/en_US/equipment/cycling-components/bike-stems-accessories/integrated-handlebar/stems/bontrager-aeolus-rsl-vr-c-handlebar/stem/p/44564/",
+    "notes": "Official Trek spec: 100 mm reach, 124 mm drop, 0 deg drop flare, stem lengths 80-140 mm. Stem angle and clamp height are not published - measure them. Axis offset re-derived under the level-tops model: the fit sheet needs about 47 mm from the top of the head tube to the line through the HB point, so with this frame's headset stack the offset lands high in the 40 mm clamp. Its split against the headset stack and the bar section height is NOT determined by the data - only their combined vertical effect is. MODEL CORRECTION: the quoted stem length is measured ALONG the quoted body angle (centre to centre), not horizontally - which is how stems have always been measured. With that convention the HB point sits only about 5.5 mm above the notional centre, i.e. an ~11 mm section, matching the thin aero blade the part actually has at the centre. Implied stem lengths then come out 90.1 / 90.2 / 99.6 against stock 90 / 90 / 100. The earlier level-tops fit reached the same answer by measuring length horizontally and assuming a 31.8 mm section; it fitted equally well but implied a section thickness the part does not have.",
+    "stemAngle": 0,
+    "stemClampHeight": 40,
+    "barReach": 100,
+    "barDrop": 124,
+    "stemLengths": [
+      80,
+      90,
+      100,
+      110,
+      120,
+      140
+    ],
+    "integrated": true,
+    "dropFlare": 0.0,
+    "barWidths": [
+      380,
+      400,
+      420,
+      440
+    ],
+    "stemAxisOffset": 16.2,
+    "barTubeDiameter": 11.0,
+    "flatTops": false
+  }
+]

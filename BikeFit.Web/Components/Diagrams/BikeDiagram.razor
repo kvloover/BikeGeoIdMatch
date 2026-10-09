@@ -1,0 +1,160 @@
+@using BikeFit.Web.Models
+@using BikeFit.Web.Services
+@using System.Globalization
+
+<svg class="diagram" viewBox="@($"0 0 {W} {H}")" xmlns="http://www.w3.org/2000/svg" role="img"
+     aria-label="Scaled side view of the @Size.Name frame with the fitted cockpit">
+    <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill="var(--dim)" />
+        </marker>
+        <marker id="arrow-start" markerWidth="8" markerHeight="8" refX="1" refY="4" orient="auto">
+            <path d="M8,0 L0,4 L8,8 z" fill="var(--dim)" />
+        </marker>
+    </defs>
+
+    <rect x="0" y="0" width="@W" height="@H" class="canvas" />
+
+    @* ---- wheels ---- *@
+    <circle cx="@P(d.RearAxle.X)" cy="@Q(d.RearAxle.Y)" r="@S(d.WheelRadius)" class="tyre" />
+    <circle cx="@P(d.FrontAxle.X)" cy="@Q(d.FrontAxle.Y)" r="@S(d.WheelRadius)" class="tyre" />
+    <circle cx="@P(d.RearAxle.X)" cy="@Q(d.RearAxle.Y)" r="@S(d.WheelRadius - 24)" class="rim" />
+    <circle cx="@P(d.FrontAxle.X)" cy="@Q(d.FrontAxle.Y)" r="@S(d.WheelRadius - 24)" class="rim" />
+
+    @* ---- ground ---- *@
+    <line x1="0" y1="@Q(d.RearAxle.Y - d.WheelRadius)" x2="@W" y2="@Q(d.RearAxle.Y - d.WheelRadius)" class="ground" />
+
+    @* ---- frame ---- *@
+    <line x1="@P(d.Bb.X)" y1="@Q(d.Bb.Y)" x2="@P(d.RearAxle.X)" y2="@Q(d.RearAxle.Y)" class="tube" />
+    <line x1="@P(d.RearAxle.X)" y1="@Q(d.RearAxle.Y)" x2="@P(d.SeatTubeTop.X)" y2="@Q(d.SeatTubeTop.Y)" class="tube" />
+    <line x1="@P(d.Bb.X)" y1="@Q(d.Bb.Y)" x2="@P(d.SeatTubeTop.X)" y2="@Q(d.SeatTubeTop.Y)" class="tube" />
+    <line x1="@P(d.Bb.X)" y1="@Q(d.Bb.Y)" x2="@P(d.HeadTubeBottom.X)" y2="@Q(d.HeadTubeBottom.Y)" class="tube" />
+    <line x1="@P(d.HeadTubeTop.X)" y1="@Q(d.HeadTubeTop.Y)" x2="@P(d.SeatTubeTop.X)" y2="@Q(d.SeatTubeTop.Y)" class="tube" />
+    <line x1="@P(d.HeadTubeTop.X)" y1="@Q(d.HeadTubeTop.Y)" x2="@P(d.HeadTubeBottom.X)" y2="@Q(d.HeadTubeBottom.Y)" class="tube head-tube" />
+    <line x1="@P(d.HeadTubeBottom.X)" y1="@Q(d.HeadTubeBottom.Y)" x2="@P(d.FrontAxle.X)" y2="@Q(d.FrontAxle.Y)" class="tube" />
+
+    @* ---- seatpost + saddle ---- *@
+    <line x1="@P(d.SeatTubeTop.X)" y1="@Q(d.SeatTubeTop.Y)" x2="@P(SeatpostTop.X)" y2="@Q(SeatpostTop.Y)" class="post" />
+    <line x1="@P(SeatpostTop.X)" y1="@Q(SeatpostTop.Y)" x2="@P(d.Saddle.X)" y2="@Q(d.Saddle.Y)" class="post thin" />
+    <path d="@SaddlePath()" class="saddle" />
+
+    @* ---- cockpit ---- *@
+    <line x1="@P(d.HeadTubeTop.X)" y1="@Q(d.HeadTubeTop.Y)" x2="@P(d.HeadsetTop.X)" y2="@Q(d.HeadsetTop.Y)" class="headset" />
+    <line x1="@P(d.HeadsetTop.X)" y1="@Q(d.HeadsetTop.Y)" x2="@P(d.SpacerTop.X)" y2="@Q(d.SpacerTop.Y)" class="spacers" />
+    @if (Cockpit.OnePiece)
+    {
+        <path d="@DropBar.Path(d.BarCentre, Cockpit, Proj)" class="drop" />
+        <path d="@OnePieceCockpit.Path(Chain, Cockpit, Proj)" class="onepiece-body" />
+    }
+    else
+    {
+        <line x1="@P(d.SpacerTop.X)" y1="@Q(d.SpacerTop.Y)" x2="@P(d.BarCentre.X)" y2="@Q(d.BarCentre.Y)" class="stem" />
+        <path d="@DropBar.Path(d.BarCentre, Cockpit, Proj)" class="drop" />
+        <circle cx="@P(d.BarCentre.X)" cy="@Q(d.BarCentre.Y)" r="@S(d.BarRadius)" class="bar" />
+    }
+
+    @* ---- stack / reach ---- *@
+    <line x1="@P(0)" y1="@Q(0)" x2="@P(0)" y2="@Q(Size.Stack)" class="dim" marker-start="url(#arrow-start)" marker-end="url(#arrow)" />
+    <line x1="@P(0)" y1="@Q(Size.Stack)" x2="@P(Size.Reach)" y2="@Q(Size.Stack)" class="dim" marker-start="url(#arrow-start)" marker-end="url(#arrow)" />
+    <text x="@(P(0) - 6)" y="@Q(Size.Stack / 2)" class="dim-label" text-anchor="end">stack @F(Size.Stack)</text>
+    <text x="@P(Size.Reach / 2)" y="@(Q(Size.Stack) - 6)" class="dim-label" text-anchor="middle">reach @F(Size.Reach)</text>
+
+    @* ---- saddle to bar: the direct line is what the idmatch fit converter reports ---- *@
+    <line x1="@P(Target.BrpX)" y1="@Q(Target.BrpZ)" x2="@P(Target.HbX)" y2="@Q(Target.BrpZ)" class="dim faint" />
+    <line x1="@P(Target.HbX)" y1="@Q(Target.BrpZ)" x2="@P(Target.HbX)" y2="@Q(Target.HbZ)" class="dim faint" marker-end="url(#arrow)" />
+    <line x1="@P(Target.BrpX)" y1="@Q(Target.BrpZ)" x2="@P(Target.HbX)" y2="@Q(Target.HbZ)" class="dim direct" />
+    @*
+        One label for all three numbers. Splitting them across the direct line and the horizontal
+        leg looks tidier until the drop happens to equal the label offset, at which point they land
+        on top of each other.
+    *@
+    <text x="@P((Target.BrpX + Target.HbX) / 2)" y="@(Q((Target.BrpZ + Target.HbZ) / 2) - 10)" class="dim-label" text-anchor="middle">
+        saddle to bar @F(Direct) direct &#183; @F(Target.HbX - Target.BrpX) horizontal &#183; @F(Target.BrpZ - Target.HbZ) drop
+    </text>
+
+    @* ---- fit points ---- *@
+    <g class="target">
+        <circle cx="@P(Target.HbX)" cy="@Q(Target.HbZ)" r="5" class="target-dot" />
+        <line x1="@(P(Target.HbX) - 11)" y1="@Q(Target.HbZ)" x2="@(P(Target.HbX) + 11)" y2="@Q(Target.HbZ)" class="cross" />
+        <line x1="@P(Target.HbX)" y1="@(Q(Target.HbZ) - 11)" x2="@P(Target.HbX)" y2="@(Q(Target.HbZ) + 11)" class="cross" />
+        <text x="@(P(Target.HbX) + 14)" y="@(Q(Target.HbZ) - 8)" class="pt-label">HB @F(Target.HbX) fwd / @F(Target.HbZ) up</text>
+
+        <circle cx="@P(Target.BrpX)" cy="@Q(Target.BrpZ)" r="5" class="target-dot" />
+        <line x1="@(P(Target.BrpX) - 11)" y1="@Q(Target.BrpZ)" x2="@(P(Target.BrpX) + 11)" y2="@Q(Target.BrpZ)" class="cross" />
+        <line x1="@P(Target.BrpX)" y1="@(Q(Target.BrpZ) - 11)" x2="@P(Target.BrpX)" y2="@(Q(Target.BrpZ) + 11)" class="cross" />
+        @* below the point: the saddle is usually the top of the drawing, where the title sits *@
+        @* labelled with the entered setback, not the internal negative X *@
+        <text x="@(P(Target.BrpX) - 14)" y="@(Q(Target.BrpZ) + 16)" class="pt-label" text-anchor="end">
+            BRP @F(Target.BrpSetback) back / @F(Target.BrpZ) up
+        </text>
+    </g>
+
+    <circle cx="@P(0)" cy="@Q(0)" r="4" class="bb" />
+    <text x="12" y="22" class="title">@Bike.DisplayName &#183; size @Size.Name</text>
+    <text x="12" y="40" class="subtitle">
+        HTA @Size.HeadTubeAngle.ToString("0.0") &#176; &#183; stem @F(StemLength) mm @Sign(StemAngle)&#176;
+        (@Sign(d.StemAngleFromHorizontal)&#176; from horizontal) &#183; @F(SpacerStack) mm spacers
+    </text>
+    <text x="@(W - 12)" y="@(H - 12)" class="scale-note" text-anchor="end">1 mm = @Proj.Scale.ToString("0.000") px</text>
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public BikeModel Bike { get; set; } = default!;
+    [Parameter, EditorRequired] public SizeGeometry Size { get; set; } = default!;
+    [Parameter, EditorRequired] public CockpitSpec Cockpit { get; set; } = default!;
+    [Parameter, EditorRequired] public FitTarget Target { get; set; } = default!;
+    [Parameter] public double SpacerStack { get; set; }
+    [Parameter] public double StemLength { get; set; } = 100;
+    [Parameter] public double StemAngle { get; set; } = -6;
+    [Parameter] public double W { get; set; } = 940;
+    [Parameter] public double H { get; set; } = 560;
+
+    private BikeDrawing d = default!;
+    private CockpitMath.Chain Chain = default!;
+    private Projector Proj = default!;
+    private Pt SeatpostTop;
+    private double Direct;
+
+    protected override void OnParametersSet()
+    {
+        d = BikeDrawing.Build(Size, Cockpit, Target, SpacerStack, StemLength, StemAngle);
+        Chain = CockpitMath.Build(Size, Cockpit, SpacerStack, StemLength, StemAngle);
+
+        // the post runs up the seat tube axis to just under the saddle
+        var axis = new Pt(-Math.Cos(CockpitMath.Rad(Size.SeatTubeAngle)), Math.Sin(CockpitMath.Rad(Size.SeatTubeAngle)));
+        var postLength = Math.Max(d.SeatTubeTop.Length, d.Saddle.Length - 25);
+        SeatpostTop = axis * postLength;
+
+        Direct = Math.Sqrt(Math.Pow(Target.HbX - Target.BrpX, 2) + Math.Pow(Target.HbZ - Target.BrpZ, 2));
+
+        var pts = new List<Pt>
+        {
+            d.Bb, d.RearAxle, d.FrontAxle, d.HeadTubeTop, d.HeadTubeBottom, d.SeatTubeTop,
+            d.VirtualTopTubeEnd, d.BarCentre, d.Saddle, SeatpostTop,
+            DropBar.FrontOfTops(d.BarCentre, Cockpit), DropBar.End(d.BarCentre, Cockpit),
+            new(Target.HbX, Target.HbZ), new(Target.BrpX, Target.BrpZ),
+            new(d.RearAxle.X - d.WheelRadius, d.RearAxle.Y - d.WheelRadius),
+            new(d.FrontAxle.X + d.WheelRadius, d.FrontAxle.Y + d.WheelRadius)
+        };
+        Proj = new Projector(pts, W, H, marginMm: 60, marginPx: 28);
+    }
+
+    private double P(double mm) => Math.Round(Proj.X(mm), 2);
+    private double Q(double mm) => Math.Round(Proj.Y(mm), 2);
+    private double S(double mm) => Math.Round(Proj.L(mm), 2);
+    private static string F(double v) => v.ToString("0", CultureInfo.InvariantCulture);
+    private static string Sign(double v) => (v >= 0 ? "+" : "") + v.ToString("0.#", CultureInfo.InvariantCulture);
+
+    /// <summary>A simple saddle outline centred on the BRP, nose forward.</summary>
+    private string SaddlePath()
+    {
+        var c = d.Saddle;
+        var (x, y) = (P(c.X), Q(c.Y));
+        var half = S(135);   // ~270 mm saddle
+        var back = S(70);
+        var thick = S(22);
+        return string.Create(CultureInfo.InvariantCulture,
+            $"M {x - back:0.##} {y:0.##} q {-S(6):0.##} {-thick:0.##} {S(18):0.##} {-thick * 0.9:0.##} L {x + half:0.##} {y - thick * 0.55:0.##} q {S(10):0.##} {thick * 0.3:0.##} {-S(4):0.##} {thick * 0.8:0.##} L {x - back + S(10):0.##} {y + thick * 0.2:0.##} z");
+    }
+
+}

@@ -1,0 +1,11 @@
+# personal data the app writes at runtime: your bikes, cockpit corrections, fit sheets
+BikeFit.Web/Data/user/
+
+# build output
+bin/
+obj/
+.vs/
+*.user
+
+# local Claude Code settings
+.claude/settings.local.json

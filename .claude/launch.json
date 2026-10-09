@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "bikefit",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "BikeFit.Web/BikeFit.Web.csproj", "--urls", "http://localhost:5199"],
+      "port": 5199
+    }
+  ]
+}
