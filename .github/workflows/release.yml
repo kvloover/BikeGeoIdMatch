@@ -1,0 +1,25 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # notes come from the pull requests merged since the previous tag, grouped by .github/release.yml
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          flags=""
+          # v1.2.0-rc.1 style tags are marked as pre-releases
+          case "$TAG" in *-*) flags="--prerelease" ;; esac
+          gh release create "$TAG" $flags --verify-tag --generate-notes \
+            --notes "Run it: \`docker run --rm -p 8080:8080 ${{ secrets.DOCKERHUB_USERNAME }}/bikegeo:${TAG#v}\`"

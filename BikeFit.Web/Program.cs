@@ -7,10 +7,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddSingleton<UserDataFolder>();
-builder.Services.AddSingleton<BikeLibrary>();
-builder.Services.AddSingleton<FitLibrary>();
-builder.Services.AddSingleton<UserSettingsStore>();
+// the catalogue is shared and read-only; everything a visitor owns is scoped to their session
+builder.Services.AddSingleton<Catalogue>();
+builder.Services.AddScoped<BikeLibrary>();
+builder.Services.AddScoped<FitLibrary>();
+builder.Services.AddScoped<UserDataExchange>();
 builder.Services.AddScoped<FitSolver>();
 builder.Services.AddScoped<GeometryImporter>();
 builder.Services.AddHttpClient("geo", client =>
@@ -31,15 +32,13 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
+// in a container TLS is terminated by the platform in front of it
+if (!app.Configuration.GetValue<bool>("DOTNET_RUNNING_IN_CONTAINER"))
+    app.UseHttpsRedirection();
 
 app.UseAntiforgery();
 
 app.MapStaticAssets();
-
-// the user's own data, as files they can keep or carry to another machine
-app.MapGet("/export/bikes", (BikeLibrary bikes) => Results.Text(bikes.ExportUserBikes(), "application/json"));
-app.MapGet("/export/fits", (FitLibrary fits) => Results.Text(fits.Export(), "application/json"));
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

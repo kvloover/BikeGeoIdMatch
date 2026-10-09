@@ -1,161 +1,99 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using BikeFit.Web.Models;
 
 namespace BikeFit.Web.Services;
 
 /// <summary>
-/// Holds the bikes the calculator knows about: the sample library shipped in Data/bikes.json plus
-/// anything imported or entered by hand, which is persisted to the git-ignored Data/user folder.
+/// The bikes and cockpits one visitor can pick from: the shared catalogue plus whatever they have
+/// imported, entered or corrected. Their own entries live in memory for the length of the session
+/// and are kept only by exporting them.
 /// </summary>
-public sealed class BikeLibrary
+public sealed class BikeLibrary(Catalogue catalogue)
 {
-    private static readonly JsonSerializerOptions Json = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        // camelCase on write so files the app saves match the shipped ones
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    private readonly string _builtInPath;
-    private readonly string _userPath;
-    private readonly List<BikeModel> _builtIn = [];
     private readonly List<BikeModel> _user = [];
-    private readonly Lock _gate = new();
-
-    private readonly string _cockpitPath;
-    private readonly string _userCockpitPath;
-    private readonly List<CockpitPreset> _cockpits;
-    private readonly List<CockpitPreset> _userCockpits;
-
-    /// <summary>
-    /// Catalogue cockpits from Data/cockpits.json, with any user-saved version of the same id
-    /// replacing it, plus cockpits the user has added. Corrections survive a restart.
-    /// </summary>
-    public IReadOnlyList<CockpitPreset> Cockpits
-    {
-        get
-        {
-            lock (_gate)
-            {
-                var overrides = _userCockpits.ToDictionary(c => c.Id);
-                var merged = _cockpits.Select(c => overrides.GetValueOrDefault(c.Id, c)).ToList();
-                merged.AddRange(_userCockpits.Where(c => _cockpits.All(b => b.Id != c.Id)));
-                return merged;
-            }
-        }
-    }
-
-    /// <summary>True when the shipped preset with this id has been overridden by a saved correction.</summary>
-    public bool IsCockpitOverridden(string id)
-    {
-        lock (_gate) return _cockpits.Any(c => c.Id == id) && _userCockpits.Any(c => c.Id == id);
-    }
-
-    public void SaveCockpit(CockpitPreset preset)
-    {
-        lock (_gate)
-        {
-            _userCockpits.RemoveAll(c => c.Id == preset.Id);
-            _userCockpits.Add(preset);
-            File.WriteAllText(_userCockpitPath, JsonSerializer.Serialize(_userCockpits, Json));
-        }
-        Changed?.Invoke();
-    }
-
-    /// <summary>Drops a saved correction; a shipped preset reverts to its catalogue values.</summary>
-    public void ResetCockpit(string id)
-    {
-        lock (_gate)
-        {
-            if (_userCockpits.RemoveAll(c => c.Id == id) == 0) return;
-            File.WriteAllText(_userCockpitPath, JsonSerializer.Serialize(_userCockpits, Json));
-        }
-        Changed?.Invoke();
-    }
+    private readonly List<CockpitPreset> _userCockpits = [];
 
     public event Action? Changed;
 
-    public BikeLibrary(IWebHostEnvironment env, UserDataFolder userData)
-    {
-        var dataDir = Path.Combine(env.ContentRootPath, "Data");
-        _builtInPath = Path.Combine(dataDir, "bikes.json");
-        _userPath = userData.FilePath("bikes.json");
-        _cockpitPath = Path.Combine(dataDir, "cockpits.json");
-        _userCockpitPath = userData.FilePath("cockpits.json");
-        _builtIn = Load<BikeModel>(_builtInPath);
-        _user = Load<BikeModel>(_userPath);
-        _cockpits = Load<CockpitPreset>(_cockpitPath);
-        _userCockpits = Load<CockpitPreset>(_userCockpitPath);
-    }
+    public IReadOnlyList<BikeModel> All => [.. catalogue.Bikes, .. _user];
 
-    public IReadOnlyList<BikeModel> All
-    {
-        get { lock (_gate) return [.. _builtIn, .. _user]; }
-    }
+    /// <summary>Only the bikes this visitor added or edited: what an export carries.</summary>
+    public IReadOnlyList<BikeModel> UserBikes => _user;
 
     public BikeModel? Find(string id) => All.FirstOrDefault(b => b.Id == id);
 
     public void AddOrReplace(BikeModel bike)
     {
-        lock (_gate)
-        {
-            _user.RemoveAll(b => b.Id == bike.Id);
-            _user.Add(bike);
-            Save();
-        }
+        _user.RemoveAll(b => b.Id == bike.Id);
+        _user.Add(bike);
         Changed?.Invoke();
     }
 
     public void Remove(string id)
     {
-        lock (_gate)
-        {
-            if (_user.RemoveAll(b => b.Id == id) == 0) return;
-            Save();
-        }
+        if (_user.RemoveAll(b => b.Id == id) == 0) return;
         Changed?.Invoke();
     }
 
-    /// <summary>The user's own bikes as JSON, in the same shape the app saves them.</summary>
-    public string ExportUserBikes()
+    /// <summary>Merges uploaded bikes in; one with an existing id replaces it, a catalogue id is skipped.</summary>
+    public ImportSummary ImportBikes(IReadOnlyCollection<BikeModel> uploaded)
     {
-        lock (_gate) return JsonSerializer.Serialize(_user, Json);
+        var usable = uploaded
+            .Where(b => !string.IsNullOrWhiteSpace(b.Id) && b.Sizes.Count > 0 && catalogue.Bikes.All(x => x.Id != b.Id))
+            .ToList();
+        foreach (var bike in usable)
+        {
+            _user.RemoveAll(b => b.Id == bike.Id);
+            _user.Add(bike);
+        }
+        if (usable.Count > 0) Changed?.Invoke();
+        return new ImportSummary(usable.Count, uploaded.Count - usable.Count);
     }
 
-    /// <summary>Merges uploaded bikes into the user's list; a bike with an existing id replaces it.</summary>
-    public ImportSummary ImportUserBikes(string json)
+    /// <summary>
+    /// Catalogue cockpits, with any saved version of the same id replacing it, plus cockpits the
+    /// visitor has added.
+    /// </summary>
+    public IReadOnlyList<CockpitPreset> Cockpits
     {
-        var uploaded = JsonSerializer.Deserialize<List<BikeModel>>(json, Json) ?? [];
-        var imported = 0;
-        lock (_gate)
+        get
         {
-            foreach (var bike in uploaded.Where(b => !string.IsNullOrWhiteSpace(b.Id) && b.Sizes.Count > 0 && _builtIn.All(x => x.Id != b.Id)))
-            {
-                _user.RemoveAll(b => b.Id == bike.Id);
-                _user.Add(bike);
-                imported++;
-            }
-            if (imported > 0) Save();
+            var overrides = _userCockpits.ToDictionary(c => c.Id);
+            var merged = catalogue.Cockpits.Select(c => overrides.GetValueOrDefault(c.Id, c)).ToList();
+            merged.AddRange(_userCockpits.Where(c => catalogue.Cockpits.All(b => b.Id != c.Id)));
+            return merged;
         }
-        if (imported > 0) Changed?.Invoke();
-        return new ImportSummary(imported, uploaded.Count - imported);
     }
 
-    private void Save() => File.WriteAllText(_userPath, JsonSerializer.Serialize(_user, Json));
+    /// <summary>Only the cockpits this visitor corrected or added: what an export carries.</summary>
+    public IReadOnlyList<CockpitPreset> UserCockpits => _userCockpits;
 
-    private static List<T> Load<T>(string path)
+    /// <summary>True when the catalogue preset with this id has been overridden by a saved correction.</summary>
+    public bool IsCockpitOverridden(string id) =>
+        catalogue.Cockpits.Any(c => c.Id == id) && _userCockpits.Any(c => c.Id == id);
+
+    public void SaveCockpit(CockpitPreset preset)
     {
-        if (!File.Exists(path)) return [];
-        try
+        _userCockpits.RemoveAll(c => c.Id == preset.Id);
+        _userCockpits.Add(preset);
+        Changed?.Invoke();
+    }
+
+    /// <summary>Drops a saved correction; a catalogue preset reverts to its published values.</summary>
+    public void ResetCockpit(string id)
+    {
+        if (_userCockpits.RemoveAll(c => c.Id == id) == 0) return;
+        Changed?.Invoke();
+    }
+
+    public ImportSummary ImportCockpits(IReadOnlyCollection<CockpitPreset> uploaded)
+    {
+        var usable = uploaded.Where(c => !string.IsNullOrWhiteSpace(c.Id)).ToList();
+        foreach (var cockpit in usable)
         {
-            return JsonSerializer.Deserialize<List<T>>(File.ReadAllText(path), Json) ?? [];
+            _userCockpits.RemoveAll(c => c.Id == cockpit.Id);
+            _userCockpits.Add(cockpit);
         }
-        catch
-        {
-            return [];
-        }
+        if (usable.Count > 0) Changed?.Invoke();
+        return new ImportSummary(usable.Count, uploaded.Count - usable.Count);
     }
 }

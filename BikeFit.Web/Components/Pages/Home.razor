@@ -7,7 +7,7 @@
 @rendermode InteractiveServer
 @inject BikeLibrary Library
 @inject FitLibrary Fits
-@inject UserSettingsStore Settings
+@inject UserDataExchange Exchange
 @inject GeometryImporter Importer
 @implements IDisposable
 
@@ -18,6 +18,11 @@
     <p>
         Give it the BRP and HB coordinates from the fit session and it works out which frame size,
         which stem and how many spacers put the bar exactly where it belongs.
+    </p>
+    <DataTransfer FileName="bikefit-data.json" Export="ExportAll" Import="ImportAll" />
+    <p class="hint">
+        Nothing you enter is stored on the server. Your bikes, fits and settings last until you close
+        this page &mdash; export them to keep them, and upload the file next time.
     </p>
 </header>
 
@@ -42,7 +47,6 @@
                     <button class="link danger" @onclick="() => DeleteFit(fitId)">delete</button>
                 }
             </div>
-            <DataTransfer Label="fits" DownloadUrl="export/fits" FileName="bikefit-fits.json" Import="Fits.Import" />
 
             <p class="hint">
                 Both points are measured from the bottom bracket centre, as idmatch reports them.
@@ -280,7 +284,6 @@
                 }
             }
             <button class="secondary" @onclick="() => showImport = !showImport">@(showImport ? "Hide" : "Add a bike")</button>
-            <DataTransfer Label="my bikes" DownloadUrl="export/bikes" FileName="bikefit-bikes.json" Import="Library.ImportUserBikes" />
         </section>
 
         @if (showImport)
@@ -496,26 +499,27 @@
         Library.Changed += OnLibraryChanged;
         Fits.Changed += OnLibraryChanged;
 
-        if (Settings.Load() is { } saved)
-            Restore(saved);
-        else
-            OpenOnDefaults();
+        foreach (var b in Library.All.Take(1)) selected.Add(b.Id);
     }
 
-    /// <summary>First run: the most recently saved fit if there is one, and the first bike.</summary>
-    private void OpenOnDefaults()
+    private string ExportAll() => Exchange.Export(Capture());
+
+    /// <summary>Merges an uploaded file in and, when it carries the working state, puts that back on screen.</summary>
+    private ImportSummary ImportAll(string json)
     {
-        if (Fits.All.LastOrDefault() is { } fit)
-        {
-            fitId = fit.Id;
-            newFitName = fit.Name;
-            fit.ApplyTo(target);
-        }
-        foreach (var b in Library.All.Take(1)) selected.Add(b.Id);
+        var result = Exchange.Import(json);
+        if (result.Settings is { } saved)
+            Restore(saved);
+        current = null;
+        StateHasChanged();
+        return result.Summary;
     }
 
     private void Restore(UserSettings saved)
     {
+        selected.Clear();
+        bikeCockpits.Clear();
+        fitId = "";
         saved.Target.ApplyTo(target);
         saddle = saved.Saddle;
         cockpit = saved.Cockpit;
@@ -568,7 +572,6 @@
     protected override bool ShouldRender()
     {
         Recalculate();
-        Settings.Save(Capture());
         return true;
     }
 

@@ -1,6 +1,8 @@
-@* Download the user's own data as a file, or upload one made earlier (or on another machine). *@
+@* Download the visitor's own data as a file, or upload one made earlier. Nothing is kept server-side. *@
+@inject IJSRuntime Js
+
 <div class="data-transfer">
-    <a href="@DownloadUrl" download="@FileName">Export @Label</a>
+    <button class="secondary" @onclick="Download">Export my data</button>
     <label class="upload">Upload
         <InputFile OnChange="Upload" accept=".json,application/json" />
     </label>
@@ -13,13 +15,19 @@
 @code {
     private const long MaxBytes = 2 * 1024 * 1024;
 
-    [Parameter, EditorRequired] public string Label { get; set; } = "";
-    [Parameter, EditorRequired] public string DownloadUrl { get; set; } = "";
     [Parameter, EditorRequired] public string FileName { get; set; } = "";
+    /// <summary>Produces the JSON to download.</summary>
+    [Parameter, EditorRequired] public Func<string> Export { get; set; } = null!;
     /// <summary>Takes the uploaded JSON, merges it in and reports what happened.</summary>
     [Parameter, EditorRequired] public Func<string, Services.ImportSummary> Import { get; set; } = null!;
 
     private string message = "";
+
+    private async Task Download()
+    {
+        await Js.InvokeVoidAsync("bikefit.download", FileName, Export());
+        message = "";
+    }
 
     private async Task Upload(InputFileChangeEventArgs e)
     {

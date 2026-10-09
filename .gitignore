@@ -1,4 +1,4 @@
-# personal data the app writes at runtime: your bikes, cockpit corrections, fit sheets
+# old local data folder from earlier versions, no longer used
 BikeFit.Web/Data/user/
 
 # build output

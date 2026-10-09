@@ -1,0 +1,8 @@
+**/bin/
+**/obj/
+.git/
+.claude/
+.vs/
+docs/
+# never bake personal data into an image
+**/Data/user/

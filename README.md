@@ -35,8 +35,8 @@ you pick into the bar clamp centre it implies.
 Saddle-to-bar is reported as the **direct** straight line from BRP to HB, which is what the idmatch
 fit converter shows, with the horizontal component and the drop alongside it.
 
-A fit sheet can be **saved by name** and is reloaded on startup, so the coordinates and the HB
-reference survive a restart. Saved fits are personal data and live in your user folder — see
+A fit sheet can be **saved by name**, so the coordinates and the HB reference are kept for the session and,
+if you export them, between visits. Saved fits are personal data and are not kept on the server; see
 [Your data](#your-data).
 
 > Note on the HB reference: a fit sheet quoting "centre top of the handlebar" means **Top of the bar
@@ -59,28 +59,45 @@ Catalogue cockpits can be loaded from a dropdown — see below.
 
 **Bikes** — three sample archetypes ship with the app. Add more by URL, by pasting a geometry
 table, or by typing sizes in by hand, and edit any of them from the `edit` link next to the bike
-(built-in bikes are copied rather than modified). Everything you add or edit is saved to your user
-folder — see [Your data](#your-data).
+(built-in bikes are copied rather than modified). Everything you add or edit lasts for your session; export it to keep it
+— see [Your data](#your-data).
 
 ## Your data
 
-Everything personal is kept in `BikeFit.Web/Data/user/`, which is **git-ignored** so it never lands
-in the repository. The folder is created on first run, and files saved by older versions next to
-the catalogue (`Data/user-bikes.json`, `Data/user-cockpits.json`, `Data/fits.json`) are moved in
-automatically.
+The server stores nothing about you. Your bikes, saved fits, cockpit corrections and where you left
+off (target, saddle, cockpit, selected bikes) live in memory for the length of your browser session
+and are gone when you close or reload the page. To keep them, use **Export my data** at the top of
+the page, which downloads one JSON file, and **Upload** it next time to pick up where you left off.
 
-| File | Holds |
-|---|---|
-| `bikes.json` | bikes you imported, entered or edited |
-| `fits.json` | saved fit sheets (the idmatch coordinates) |
-| `cockpits.json` | your cockpit corrections and custom cockpits |
-| `settings.json` | where you left off: target, saddle, cockpit, selected bikes, sort order |
+An upload merges into what you have: an entry with the same id replaces yours, new ones are added,
+and entries that are incomplete or share an id with a built-in bike are skipped. Single-purpose
+lists exported by earlier versions (a bikes list, a fits list) can still be uploaded.
 
-`settings.json` is rewritten as you work and restored on the next start; delete it to open on the
-defaults. To back up or move your bikes and fit sheets to another machine, use **Export** and
-**Upload** under the fit selector (fits) and under the bike list (bikes). An upload merges into what
-you have: an entry with the same id replaces yours, new ones are added, and entries that are
-incomplete or share an id with a built-in bike are skipped.
+Because each visitor's data is separate and nothing is written to disk, the app is safe to host for
+more than one person and needs no persistent storage.
+
+## Running in a container
+
+A prebuilt image (linux/amd64 and linux/arm64) is published to Docker Hub on every push to `master`
+and on version tags:
+
+```bash
+docker run --rm -p 8080:8080 kvloover/bikegeo:latest
+```
+
+or build it yourself from the `Dockerfile`:
+
+```bash
+docker build -t bikegeo .
+docker run --rm -p 8080:8080 bikegeo
+```
+
+then open <http://localhost:8080>. The image listens on plain HTTP on port 8080 and expects TLS to
+be handled by whatever sits in front of it (an App Service, Container Apps, a reverse proxy). It
+writes nothing to disk, so it runs happily with `--read-only` and without a volume.
+
+One thing to know before hosting it publicly: **Add geometry → fetch from a URL** makes the server
+request whatever address a visitor types in. Restrict or disable it on a public deployment.
 
 ## The geometry
 
@@ -155,8 +172,8 @@ pages whose tables are plain HTML.
 
 ## Bundled real geometry
 
-The author's own bikes were entered into `Data/user/bikes.json`, so they are not part of the
-repository. All are taken from the manufacturer's own geometry table:
+These four bikes are not part of the repository: they were the author's own entries, kept as an
+export file. All are taken from the manufacturer's own geometry table:
 
 | Bike | Sizes | Source |
 |---|---|---|
@@ -194,8 +211,8 @@ do not publish is flagged in the preset's note rather than guessed at.
 Roval publishes a 40 mm steerer clamp height for the Rapide; the others are assumed to match and
 should be measured.
 
-Corrections are written to `Data/user/cockpits.json`, override the shipped preset of the same id,
-and survive a restart; *reset to catalogue values* drops the override.
+Corrections override the shipped preset of the same id for your session (export to keep them),
+and *reset to catalogue values* drops the override.
 
 **Each bike is assigned its own cockpit**, so stock builds compare directly against one another — an
 SL8 with its Roval Rapide next to a Madone with its Bontrager and an Aethos with its Alpinist, all
@@ -242,21 +259,33 @@ Both are plain inline SVG, theme-aware, and scale to the container.
 
 ```
 BikeFit.Web/
-  Models/          BikeGeometry.cs, FitModels.cs, CockpitPreset.cs
+  Models/          BikeGeometry.cs, FitModels.cs, CockpitPreset.cs, FitProfile.cs, UserData.cs
   Services/        CockpitMath.cs, FitSolver.cs, BikeDrawing.cs,
-                   BikeLibrary.cs, FitLibrary.cs, GeometryImporter.cs,
-                   UserDataFolder.cs, UserSettingsStore.cs
+                   Catalogue.cs, BikeLibrary.cs, FitLibrary.cs, UserDataExchange.cs,
+                   GeometryImporter.cs
   Components/
     Pages/Home.razor
     Diagrams/BikeDiagram.razor, CockpitDiagram.razor
+  Components/Shared/DataTransfer.razor   export / upload
   Data/bikes.json          sample archetypes (read-only)
   Data/cockpits.json       catalogue cockpit presets (read-only)
-  Data/user/               git-ignored, see "Your data":
-    bikes.json             your bikes
-    fits.json              saved fit sheets
-    cockpits.json          your cockpit corrections and custom cockpits
-    settings.json          last working state
 ```
+
+## Releases
+
+Releases are cut by pushing a version tag:
+
+```bash
+git tag v1.2.0
+git push origin v1.2.0
+```
+
+That one tag does two things: the **Release** workflow creates a GitHub Release whose notes are
+generated from the pull requests merged since the previous tag, and the **Docker image** workflow
+publishes `1.2.0`, `1.2` and `latest` images. Label pull requests (`feature`, `fix`, `data`,
+`docs`) to have them grouped in the notes, or `skip-changelog` to leave one out; the grouping lives
+in [`.github/release.yml`](.github/release.yml). A tag with a suffix, such as `v1.2.0-rc.1`, is
+marked as a pre-release.
 
 ## License
 
